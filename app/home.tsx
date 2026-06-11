@@ -4,6 +4,9 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    Animated,
+    Easing,
+    Image,
     SafeAreaView,
     ScrollView,
     StatusBar,
@@ -63,6 +66,83 @@ export default function HomeScreen() {
     const [loading, setLoading] = useState(true);
     const [greeting, setGreeting] = useState("Good Morning");
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    // Powered By Animation
+    const fadeAnim = React.useRef(new Animated.Value(0)).current;
+    const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
+    const [logoIndex, setLogoIndex] = useState(0);
+
+    // Floating Animation for Banners
+    const floatAnim = React.useRef(new Animated.Value(0)).current;
+    
+    // Fade in for Menu Items
+    const menuFadeAnim = React.useRef(new Animated.Value(0)).current;
+
+    const logos = [
+        require("../assets/images/Amul-Logo-removebg-preview.png"),
+        require("../assets/images/balaji.png"),
+    ];
+
+    useEffect(() => {
+        // Menu Fade In
+        Animated.timing(menuFadeAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+        }).start();
+
+        // Floating loop for banners
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(floatAnim, {
+                    toValue: -10,
+                    duration: 2000,
+                    easing: Easing.inOut(Easing.sin),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(floatAnim, {
+                    toValue: 0,
+                    duration: 2000,
+                    easing: Easing.inOut(Easing.sin),
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+
+        const runAnimation = () => {
+            // Faster switch (Blink)
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(scaleAnim, {
+                    toValue: 0.9,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+            ]).start(() => {
+                setLogoIndex((prev) => (prev === 0 ? 1 : 0));
+                Animated.parallel([
+                    Animated.timing(fadeAnim, {
+                        toValue: 1,
+                        duration: 300,
+                        useNativeDriver: true,
+                    }),
+                    Animated.spring(scaleAnim, {
+                        toValue: 1,
+                        friction: 3,
+                        useNativeDriver: true,
+                    }),
+                ]).start(() => {
+                    setTimeout(runAnimation, 2000);
+                });
+            });
+        };
+
+        runAnimation();
+    }, []);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -126,23 +206,49 @@ export default function HomeScreen() {
 
             {/* Header */}
             <View style={styles.header}>
-                <View>
-                    <Text style={styles.greeting}>{greeting}</Text>
-                    <Text style={styles.businessName}>{profile?.businessName || "Your Business"}</Text>
-                    <View style={styles.locationContainer}>
-                        <Ionicons name="person" size={14} color="#0c831f" />
-                        <Text style={styles.locationText}>{profile?.name || "User Name"}</Text>
+                {/* Top Row: Info + Logout */}
+                <View style={styles.headerTop}>
+                    <View style={styles.headerLeft}>
+                        <Text style={styles.greeting}>{greeting}</Text>
+                        <Text style={styles.businessName}>{profile?.businessName || "Your Business"}</Text>
+                        <View style={styles.locationContainer}>
+                            <Ionicons name="person" size={14} color="#0c831f" />
+                            <Text style={styles.locationText}>{profile?.name || "User Name"}</Text>
+                        </View>
+                    </View>
+                    <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                        <Ionicons name="log-out-outline" size={24} color="#d32f2f" />
+                        <Text style={styles.logoutText}>Logout</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Bottom Row: Animated Powered By */}
+                <View style={styles.headerPoweredBy}>
+                    <View style={styles.pillContainer}>
+                        <Text style={styles.poweredByLabel}>Powered by</Text>
+                        
+                        <View style={styles.pillDivider} />
+
+                        <Animated.View style={[
+                            styles.headerLogoContainer,
+                            {
+                                opacity: fadeAnim,
+                                transform: [{ scale: scaleAnim }]
+                            }
+                        ]}>
+                            <Image
+                                source={logos[logoIndex]}
+                                style={styles.headerLogo}
+                                resizeMode="contain"
+                            />
+                        </Animated.View>
                     </View>
                 </View>
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                    <Ionicons name="log-out-outline" size={24} color="#d32f2f" />
-                    <Text style={styles.logoutText}>Logout</Text>
-                </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Menu Grid */}
-                <View style={styles.grid}>
+                <Animated.View style={[styles.grid, { opacity: menuFadeAnim }]}>
                     {MENU_ITEMS.map((item) => (
                         <TouchableOpacity
                             key={item.id}
@@ -155,25 +261,31 @@ export default function HomeScreen() {
                             <Text style={styles.cardTitle}>{item.title}</Text>
                         </TouchableOpacity>
                     ))}
-                </View>
+                </Animated.View>
 
                 {/* Dashboard Type Info */}
-                <View style={styles.banner}>
+                <Animated.View style={[
+                    styles.banner,
+                    { transform: [{ translateY: floatAnim }] }
+                ]}>
                     <View style={styles.bannerTextContainer}>
                         <Text style={styles.bannerTitle}>Hotel Dashboard</Text>
                         <Text style={styles.bannerSubtitle}>This component opened because you selected 'Hotel' as your business category.</Text>
                     </View>
                     <Ionicons name="business" size={40} color="#0c831f" />
-                </View>
+                </Animated.View>
 
                 {/* Quick Stats or Additional Info can go here */}
-                <View style={styles.banner}>
+                <Animated.View style={[
+                    styles.banner,
+                    { transform: [{ translateY: floatAnim }] }
+                ]}>
                     <View style={styles.bannerTextContainer}>
                         <Text style={styles.bannerTitle}>Business Insights</Text>
                         <Text style={styles.bannerSubtitle}>Track your daily earnings and expenses here.</Text>
                     </View>
                     <MaterialCommunityIcons name="trending-up" size={40} color="#0c831f" />
-                </View>
+                </Animated.View>
             </ScrollView>
 
             <LogoutModal
@@ -191,20 +303,76 @@ const styles = StyleSheet.create({
         backgroundColor: "#f8f9fa",
     },
     header: {
+        backgroundColor: "#ffb703",
+        paddingTop: 60,
+        paddingBottom: 20,
+        paddingHorizontal: 16,
+        borderBottomLeftRadius: 35,
+        borderBottomRightRadius: 35,
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+    },
+    headerTop: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingHorizontal: 20,
-        paddingTop: 60,
-        paddingBottom: 40,
-        backgroundColor: "#ffb703",
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        elevation: 6,
+        marginBottom: 20,
+    },
+    headerLeft: {
+        flex: 1,
+    },
+    headerPoweredBy: {
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 10,
+        width: "100%",
+    },
+    pillContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.4)",
+        paddingVertical: 6,
+        paddingHorizontal: 15,
+        borderRadius: 25,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.5)",
+        elevation: 5,
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+    },
+    tickerContainer: {
+        height: 24,
+        justifyContent: "center",
+        alignItems: "center",
+        overflow: "hidden",
+    },
+    pillDivider: {
+        width: 1,
+        height: 20,
+        backgroundColor: "rgba(0,0,0,0.1)",
+        marginHorizontal: 10,
+    },
+    poweredByLabel: {
+        fontSize: 12,
+        fontWeight: "900",
+        color: "#1a1a1a",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    headerLogoContainer: {
+        width: 60,
+        height: 30,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    headerLogo: {
+        width: "100%",
+        height: "100%",
     },
     greeting: {
         fontSize: 14,

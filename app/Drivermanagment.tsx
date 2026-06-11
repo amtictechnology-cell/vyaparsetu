@@ -94,6 +94,7 @@ export default function DriverManagement() {
     const [modalVisible, setModalVisible] = useState(false);
     const [isFetching, setIsFetching] = useState(true);
     const [showAnimModal, setShowAnimModal] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     const carAnim = useRef(new Animated.Value(0)).current;
 
     const startCarAnimation = () => {
@@ -252,9 +253,13 @@ export default function DriverManagement() {
             const [_, response] = await Promise.all([minWaitPromise, apiPromise]);
             let { ok, data, status } = response;
             
-            setShowAnimModal(false);
-            
             if (ok) {
+                // Show Success state for 2 seconds
+                setIsSuccess(true);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                setShowAnimModal(false);
+                setIsSuccess(false); // Reset for next time
+                
                 if (isEditMode) {
                     const addedDriver = data.updatedDriver || data.newDriver || data.driver || {};
                     setDrivers(prev => prev.map(d => {
@@ -290,6 +295,7 @@ export default function DriverManagement() {
                 setModalVisible(false);
                 resetForm();
             } else {
+                setShowAnimModal(false);
                 Alert.alert("Error", data.message || `Failed to ${isEditMode ? 'edit' : 'add'} driver`);
             }
         } catch (error) {
@@ -499,22 +505,33 @@ export default function DriverManagement() {
             >
                 <View style={styles.animationOverlay}>
                     <View style={styles.animationBox}>
-                        <Animated.Text
-                            style={[
-                                styles.movingCar,
-                                {
-                                    transform: [{
-                                        translateX: carAnim.interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: [-60, 60] // move car left to right
-                                        })
-                                    }]
-                                }
-                            ]}
-                        >
-                            🚗💨
-                        </Animated.Text>
-                        <Text style={styles.animationText}>Adding Driver...</Text>
+                        {isSuccess ? (
+                            <View style={{ alignItems: 'center' }}>
+                                <View style={styles.successIconBox}>
+                                    <Ionicons name="checkmark-circle" size={60} color="#0c831f" />
+                                </View>
+                                <Text style={styles.animationText}>Success!</Text>
+                            </View>
+                        ) : (
+                            <>
+                                <Animated.Text
+                                    style={[
+                                        styles.movingCar,
+                                        {
+                                            transform: [{
+                                                translateX: carAnim.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [-60, 60] // move car left to right
+                                                })
+                                            }]
+                                        }
+                                    ]}
+                                >
+                                    🚗💨
+                                </Animated.Text>
+                                <Text style={styles.animationText}>{isEditMode ? 'Updating Driver...' : 'Adding Driver...'}</Text>
+                            </>
+                        )}
                     </View>
                 </View>
             </Modal>
@@ -769,8 +786,15 @@ const styles = StyleSheet.create({
     },
     animationText: {
         fontSize: 18,
-        fontWeight: "800",
+        fontWeight: "900",
         color: "#0c831f",
         marginTop: 8,
     },
+    successIconBox: {
+        width: 80,
+        height: 80,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10,
+    }
 });

@@ -10,6 +10,7 @@ export default function RootLayout() {
       <Stack.Screen name="home" />
       <Stack.Screen name="Drivermanagment" />
       <Stack.Screen name="staffmanagment" />
+      <Stack.Screen name="staffprofile" />
       <Stack.Screen name="regularcustomer" />
       <Stack.Screen name="khatabook" />
       <Stack.Screen name="bookingrooms" />

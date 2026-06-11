@@ -51,7 +51,7 @@ export default function InformationScreen() {
           if (finalCategory === "shop") {
             router.replace("/Shop" as any);
           } else if (finalCategory === "supplier" || finalCategory === "suppliers") {
-            router.replace("/Supplier" as any);
+            router.replace("/supplier" as any);
           } else {
             router.replace("/home" as any);
           }

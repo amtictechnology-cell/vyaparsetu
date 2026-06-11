@@ -57,7 +57,7 @@ export default function LandingPage() {
             router.replace("/Shop" as any);
           }
           else if (category === "supplier" || category === "suppliers") {
-            router.replace("/Supplier" as any);
+            router.replace("/supplier" as any);
           }
           else if (category) {
             router.replace("/home" as any);
