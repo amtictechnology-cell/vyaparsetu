@@ -9,6 +9,7 @@ export default function RootLayout() {
       <Stack.Screen name="information" />
       <Stack.Screen name="home" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="trackrecord" />
       <Stack.Screen name="additem" />
       <Stack.Screen name="Drivermanagment" />
       <Stack.Screen name="staffmanagment" />

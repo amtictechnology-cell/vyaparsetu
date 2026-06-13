@@ -108,6 +108,17 @@ export default function SettingsScreen() {
                         </View>
                         <Ionicons name="chevron-forward-outline" size={18} color="#999" />
                     </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.edgeRow} onPress={() => router.push("/trackrecord")}>
+                        <View style={[styles.infoIconWrapper, { backgroundColor: "#e8eaf6" }]}>
+                            <Ionicons name="analytics-outline" size={20} color="#3f51b5" />
+                        </View>
+                        <View style={styles.actionTextWrapper}>
+                            <Text style={styles.actionLabel}>Track Record</Text>
+                            <Text style={styles.actionSubtitle}>View room bookings and billing analytics</Text>
+                        </View>
+                        <Ionicons name="chevron-forward-outline" size={18} color="#999" />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Actions Section (Edge-to-Edge) */}
