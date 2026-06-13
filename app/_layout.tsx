@@ -8,10 +8,12 @@ export default function RootLayout() {
       <Stack.Screen name="otp" />
       <Stack.Screen name="information" />
       <Stack.Screen name="home" />
+      <Stack.Screen name="settings" />
+      <Stack.Screen name="additem" />
       <Stack.Screen name="Drivermanagment" />
       <Stack.Screen name="staffmanagment" />
       <Stack.Screen name="staffprofile" />
-      <Stack.Screen name="regularcustomer" />
+      <Stack.Screen name="billgenerate" />
       <Stack.Screen name="khatabook" />
       <Stack.Screen name="bookingrooms" />
       <Stack.Screen name="(tabs)" />

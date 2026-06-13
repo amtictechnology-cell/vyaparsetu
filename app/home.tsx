@@ -15,7 +15,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import LogoutModal from "../components/LogoutModal";
+
 
 const MENU_ITEMS = [
     {
@@ -36,11 +36,11 @@ const MENU_ITEMS = [
     },
     {
         id: "customer",
-        title: "Regular\nCustomer",
-        icon: "person-add-outline",
+        title: "Bill\nGenerate",
+        icon: "receipt-outline",
         color: "#e3f2fd",
         iconColor: "#1565c0",
-        route: "/regularcustomer",
+        route: "/billgenerate",
     },
     {
         id: "khatabook",
@@ -65,7 +65,6 @@ export default function HomeScreen() {
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [greeting, setGreeting] = useState("Good Morning");
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     // Powered By Animation
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -178,20 +177,6 @@ export default function HomeScreen() {
         updateGreeting();
     }, []);
 
-    const handleLogout = () => {
-        setShowLogoutModal(true);
-    };
-
-    const confirmLogout = async () => {
-        try {
-            await AsyncStorage.removeItem("userToken");
-            setShowLogoutModal(false);
-            router.replace("/signup");
-        } catch (error) {
-            console.error("Error clearing token:", error);
-        }
-    };
-
     if (loading) {
         return (
             <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -216,9 +201,8 @@ export default function HomeScreen() {
                             <Text style={styles.locationText}>{profile?.name || "User Name"}</Text>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                        <Ionicons name="log-out-outline" size={24} color="#d32f2f" />
-                        <Text style={styles.logoutText}>Logout</Text>
+                    <TouchableOpacity style={styles.settingsButton} onPress={() => router.push("/settings")}>
+                        <Ionicons name="settings-outline" size={26} color="#000" />
                     </TouchableOpacity>
                 </View>
 
@@ -288,11 +272,7 @@ export default function HomeScreen() {
                 </Animated.View>
             </ScrollView>
 
-            <LogoutModal
-                visible={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
-                onConfirm={confirmLogout}
-            />
+
         </SafeAreaView>
     );
 }
@@ -398,19 +378,10 @@ const styles = StyleSheet.create({
         color: "#444",
         fontWeight: "700",
     },
-    logoutButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#ffebee",
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+    settingsButton: {
+        padding: 8,
         borderRadius: 20,
-        gap: 4,
-    },
-    logoutText: {
-        color: "#d32f2f",
-        fontSize: 12,
-        fontWeight: "700",
+        backgroundColor: "rgba(255, 255, 255, 0.35)",
     },
     scrollContent: {
         padding: 20,
