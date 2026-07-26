@@ -117,8 +117,22 @@ export default function DriverManagement() {
         ).start();
     };
 
+    const DRIVER_CACHE_KEY = "driver_list_cache";
+
     const fetchDrivers = async () => {
         setIsFetching(true);
+        
+        // Load from cache first
+        try {
+            const cachedData = await AsyncStorage.getItem(DRIVER_CACHE_KEY);
+            if (cachedData) {
+                setDrivers(JSON.parse(cachedData));
+                setIsFetching(false); // Stop loading indicator early since we have cached data
+            }
+        } catch (e) {
+            console.log("Error loading driver cache", e);
+        }
+
         try {
             const token = await AsyncStorage.getItem("userToken");
             const response = await fetch(`${BASE_URL}/hotel/get-all-driver`, {
@@ -140,7 +154,11 @@ export default function DriverManagement() {
                     pincode: d.address?.pincode || "",
                 }));
                 // Sort by SR number descending to show newest first, or leave as order from API
-                setDrivers(formattedDrivers.reverse());
+                const finalDrivers = formattedDrivers.reverse();
+                setDrivers(finalDrivers);
+                
+                // Save to cache
+                await AsyncStorage.setItem(DRIVER_CACHE_KEY, JSON.stringify(finalDrivers));
             }
         } catch (error) {
             console.error("Error fetching drivers:", error);

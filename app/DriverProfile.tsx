@@ -100,6 +100,17 @@ export default function DriverProfile() {
 
     const fetchEntriesData = async () => {
         try {
+            const cacheKey = `driver_entries_${driverId}`;
+            try {
+                const cached = await AsyncStorage.getItem(cacheKey);
+                if (cached) {
+                    setEntries(JSON.parse(cached));
+                    setEntriesLoading(false);
+                }
+            } catch (e) {
+                console.log("Cache error", e);
+            }
+
             const token = await AsyncStorage.getItem("userToken");
             const response = await fetch(`${BASE_URL}/hotel/get-all-driver-entry?driverId=${driverId}`, {
                 method: "GET",
@@ -111,6 +122,7 @@ export default function DriverProfile() {
             if (response.ok && data.drivers) {
                 const sortedEntries = data.drivers.sort((a: any, b: any) => new Date(b.entryDate || b.createdAt).getTime() - new Date(a.entryDate || a.createdAt).getTime());
                 setEntries(sortedEntries);
+                await AsyncStorage.setItem(cacheKey, JSON.stringify(sortedEntries));
             }
         } catch (error) {
             console.error("Error fetching entries:", error);
@@ -122,6 +134,15 @@ export default function DriverProfile() {
     useEffect(() => {
         const fetchDriverData = async () => {
             try {
+                const cacheKey = `driver_profile_${driverId}`;
+                try {
+                    const cached = await AsyncStorage.getItem(cacheKey);
+                    if (cached) {
+                        setDriver(JSON.parse(cached));
+                        setLoading(false);
+                    }
+                } catch(e){}
+
                 const token = await AsyncStorage.getItem("userToken");
                 const response = await fetch(`${BASE_URL}/hotel/get-all-driver`, {
                     method: "GET",
@@ -134,6 +155,7 @@ export default function DriverProfile() {
                     const foundDriver = data.drivers.find((d: any) => d._id === driverId || d.driverId === driverId);
                     if (foundDriver) {
                         setDriver(foundDriver);
+                        await AsyncStorage.setItem(cacheKey, JSON.stringify(foundDriver));
                     }
                 }
             } catch (error) {
