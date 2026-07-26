@@ -1,3 +1,4 @@
+import { BASE_URL } from "../constants/Config";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -12,7 +13,6 @@ import {
     Modal,
     Platform,
     RefreshControl,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -58,7 +58,7 @@ interface MenuItem {
     rate: number;
 }
 
-const BASE_URL = "http://192.168.31.192:6000/api/v1";
+
 
 const FloatingLabelInput = ({ label, value, onChangeText, ...props }: any) => {
     const [isFocused, setIsFocused] = useState(false);
@@ -651,8 +651,8 @@ export default function BillGenerateScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
             {/* Header */}
             <View style={styles.header}>
@@ -796,7 +796,7 @@ export default function BillGenerateScreen() {
                 visible={billModalVisible}
                 onRequestClose={resetBuilderItemForm}
             >
-                <SafeAreaView style={styles.builderOverlayContainer}>
+                <View style={styles.builderOverlayContainer}>
                     <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
                     {/* Header bar of modal */}
@@ -1051,7 +1051,7 @@ export default function BillGenerateScreen() {
                             )}
                         </View>
                     </ScrollView>
-                </SafeAreaView>
+                </View>
             </Modal>
 
             {/* ── Bill Details Modal ── */}
@@ -1173,7 +1173,7 @@ export default function BillGenerateScreen() {
                     <Text style={styles.toastText}>{toastMessage}</Text>
                 </View>
             )}
-        </SafeAreaView>
+        </View>
     );
 }
 

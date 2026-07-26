@@ -8,7 +8,6 @@ import {
     Image,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -16,7 +15,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-const BASE_URL = "http://192.168.31.192:6000/api/v1";
+import { BASE_URL } from "../constants/Config";
 
 // ── Single booking entry type ─────────────────────────────────────────────────
 type BookingEntry = {
@@ -200,8 +199,8 @@ export default function CustomerProfile() {
     const allEntries = allBookings.sort((a, b) => new Date(b.bookedAt).getTime() - new Date(a.bookedAt).getTime());
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
             {/* ── Single Booking Confirm Modal ───────────────── */}
             <Modal visible={showSingleModal} transparent animationType="fade">
@@ -557,7 +556,7 @@ export default function CustomerProfile() {
                     </View>
                 )}
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 

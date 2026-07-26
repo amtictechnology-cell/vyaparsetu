@@ -8,10 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Video, ResizeMode } from 'expo-av';
 import LogoutModal from '../components/LogoutModal';
 
-
-
-
-export default function ShopScreen() {
+export default function BuilderScreen() {
     const router = useRouter();
     const [profile, setProfile] = useState<any>(null);
     const [settings, setSettings] = useState<any>(null);
@@ -45,7 +42,7 @@ export default function ShopScreen() {
                     const data = await response.json();
                     if (response.ok && data.user) {
                         setProfile(data.user);
-                        const categoryName = (data.user.businessCategory || "shop").toLowerCase();
+                        const categoryName = (data.user.businessCategory || "builder").toLowerCase();
                         fetchSettings(categoryName);
                     }
                 }
@@ -134,7 +131,7 @@ export default function ShopScreen() {
                                 {greeting}
                             </Text>
                             <Text style={[styles.headerSettingsTitle, { color: textPrimary, textAlign: "left" }]} numberOfLines={1}>
-                                {profile?.businessName || settings?.headerTitle || (profile?.businessCategory ? profile.businessCategory.charAt(0).toUpperCase() + profile.businessCategory.slice(1) : "Shop")}
+                                {profile?.businessName || settings?.headerTitle || (profile?.businessCategory ? profile.businessCategory.charAt(0).toUpperCase() + profile.businessCategory.slice(1) : "Builder")}
                             </Text>
                         </View>
                     </View>
@@ -160,8 +157,8 @@ export default function ShopScreen() {
                 </View>
             ) : null}
             <View style={styles.content}>
-                <Ionicons name="storefront" size={80} color="#0c831f" />
-                <Text style={styles.message}>{"This component opened because you selected 'Shop' as your business category."}</Text>
+                <Ionicons name="construct-outline" size={80} color="#0c831f" />
+                <Text style={styles.message}>{"This component opened because you selected 'Builder' as your business category."}</Text>
                 <TouchableOpacity style={styles.button} onPress={() => router.replace('/signup')}>
                     <Text style={styles.buttonText}>Go to Signup</Text>
                 </TouchableOpacity>
@@ -172,7 +169,6 @@ export default function ShopScreen() {
                 onClose={() => setShowLogoutModal(false)}
                 onConfirm={confirmLogout}
             />
-
 
         </SafeAreaView>
     );
@@ -233,4 +229,3 @@ const styles = StyleSheet.create({
     button: { backgroundColor: '#0c831f', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 },
     buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
 });
-

@@ -3,9 +3,9 @@ import {
     View,
     Text,
     StyleSheet,
-    SafeAreaView,
     ScrollView,
     TouchableOpacity,
+    StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -22,7 +22,8 @@ export default function Appblance() {
     ];
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color="#000" />
@@ -84,7 +85,7 @@ export default function Appblance() {
                 </View>
                 <View style={{ height: 32 }} />
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 

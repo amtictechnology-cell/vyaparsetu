@@ -1,11 +1,12 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
+import { BASE_URL } from "../constants/Config";
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,7 +15,7 @@ import {
   View,
 } from "react-native";
 
-const CATEGORIES = ["Hotel", "Shop", "Supplier"];
+const CATEGORIES = ["Hotel", "Shop", "Supplier", "Printing", "Builder"];
 
 export default function InformationScreen() {
   const [name, setName] = useState("");
@@ -28,7 +29,7 @@ export default function InformationScreen() {
       try {
         const apiCategory = category.toLowerCase() === "supplier" ? "supplier" : category.toLowerCase();
 
-        const response = await fetch("http://192.168.31.192:6000/api/v1/user/complete-profile", {
+        const response = await fetch(`${BASE_URL}/user/complete-profile`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -48,12 +49,21 @@ export default function InformationScreen() {
             await AsyncStorage.setItem("userToken", data.token);
           }
           const finalCategory = (data?.user?.businessCategory || apiCategory).toLowerCase();
-          if (finalCategory === "shop") {
-            router.replace("/Shop" as any);
-          } else if (finalCategory === "supplier" || finalCategory === "suppliers") {
-            router.replace("/supplier" as any);
+          const isSubscribed = await AsyncStorage.getItem("isSubscribed");
+          if (isSubscribed === "true") {
+            if (finalCategory === "shop") {
+              router.replace("/Shop" as any);
+            } else if (finalCategory === "supplier" || finalCategory === "suppliers") {
+              router.replace("/supplier" as any);
+            } else if (finalCategory === "printing") {
+              router.replace("/printing" as any);
+            } else if (finalCategory === "builder") {
+              router.replace("/builder" as any);
+            } else {
+              router.replace("/home" as any);
+            }
           } else {
-            router.replace("/home" as any);
+            router.replace("/plans" as any);
           }
         } else {
           Alert.alert("Error", data.message || "Failed to complete profile");
@@ -194,17 +204,19 @@ const styles = StyleSheet.create({
   },
   categoryContainer: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
     marginTop: 4,
   },
   categoryChip: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: "#eee",
     backgroundColor: "#fff",
-    flex: 1,
+    minWidth: "30%",
+    flexGrow: 1,
     alignItems: "center",
   },
   categoryChipActive: {
@@ -243,3 +255,4 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 });
+

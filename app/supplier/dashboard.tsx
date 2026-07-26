@@ -1,7 +1,8 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+    Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import SupplierCompanyBill from './company-bill';
@@ -26,90 +27,7 @@ export default function SupplierDashboard() {
                 </View>
             </View>
 
-            {/* ── Quick Access Heading ── */}
-            <Text style={styles.sectionTitle}>Quick Access</Text>
-
-            {/* ── Card 1: Rate List ── */}
-            <TouchableOpacity
-                style={[styles.card, styles.cardGreen]}
-                onPress={() => setRateListModal(true)}
-                activeOpacity={0.88}
-            >
-                <View style={styles.cardIconBox}>
-                    <Ionicons name="pricetags-outline" size={32} color="#0c831f" />
-                </View>
-                <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>My Rate List</Text>
-                    <Text style={styles.cardDesc}>Apni items aur prices dekhein, add ya edit karein</Text>
-                </View>
-                <View style={styles.cardArrow}>
-                    <Ionicons name="chevron-forward" size={22} color="#0c831f" />
-                </View>
-            </TouchableOpacity>
-
-            {/* ── Card 2: Company Bill ── */}
-            <TouchableOpacity
-                style={[styles.card, styles.cardBlue]}
-                onPress={() => setCompanyBillModal(true)}
-                activeOpacity={0.88}
-            >
-                <View style={[styles.cardIconBox, styles.cardIconBoxBlue]}>
-                    <Ionicons name="receipt-outline" size={32} color="#1565c0" />
-                </View>
-                <View style={styles.cardContent}>
-                    <Text style={[styles.cardTitle, { color: '#1565c0' }]}>Company Bills</Text>
-                    <Text style={styles.cardDesc}>Customer ke bills banao aur manage karo</Text>
-                </View>
-                <View style={[styles.cardArrow, styles.cardArrowBlue]}>
-                    <Ionicons name="chevron-forward" size={22} color="#1565c0" />
-                </View>
-            </TouchableOpacity>
-
-            {/* ══ Rate List Modal ══ */}
-            <Modal
-                visible={rateListModal}
-                animationType="slide"
-                onRequestClose={() => setRateListModal(false)}
-            >
-                <SafeAreaView style={styles.modalSafe}>
-                    {/* Back Header */}
-                    <View style={styles.modalTopBar}>
-                        <TouchableOpacity
-                            style={styles.backBtn}
-                            onPress={() => setRateListModal(false)}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <Ionicons name="arrow-back" size={22} color="#111" />
-                        </TouchableOpacity>
-                        <Text style={styles.modalTopTitle}>My Rate List</Text>
-                        <View style={{ width: 36 }} />
-                    </View>
-                    <SupplierRateList />
-                </SafeAreaView>
-            </Modal>
-
-            {/* ══ Company Bill Modal ══ */}
-            <Modal
-                visible={companyBillModal}
-                animationType="slide"
-                onRequestClose={() => setCompanyBillModal(false)}
-            >
-                <SafeAreaView style={styles.modalSafe}>
-                    {/* Back Header */}
-                    <View style={styles.modalTopBar}>
-                        <TouchableOpacity
-                            style={styles.backBtn}
-                            onPress={() => setCompanyBillModal(false)}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <Ionicons name="arrow-back" size={22} color="#111" />
-                        </TouchableOpacity>
-                        <Text style={styles.modalTopTitle}>Company Bills</Text>
-                        <View style={{ width: 36 }} />
-                    </View>
-                    <SupplierCompanyBill />
-                </SafeAreaView>
-            </Modal>
+            {/* Quick Access items removed as they are now on home page */}
         </ScrollView>
     );
 }

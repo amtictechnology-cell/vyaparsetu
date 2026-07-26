@@ -1,33 +1,42 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { BASE_URL } from "../constants/Config";
 import {
     ActivityIndicator,
     Alert,
     Platform,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
+    Modal,
 } from "react-native";
 import LogoutModal from "../components/LogoutModal";
-
-const BASE_URL = "http://192.168.31.192:6000/api/v1";
+import ActivePlanCard from "../components/ActivePlanCard";
 
 export default function SettingsScreen() {
     const router = useRouter();
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editName, setEditName] = useState("");
+    const [editBusinessName, setEditBusinessName] = useState("");
+    const [savingProfile, setSavingProfile] = useState(false);
+    const [activePlan, setActivePlan] = useState<any>(null);
+    const [activatedAt, setActivatedAt] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchProfile = async () => {
+        const fetchProfileAndPlan = async () => {
             try {
                 const token = await AsyncStorage.getItem("userToken");
+                let currentProfile = null;
                 if (token) {
                     const response = await fetch(`${BASE_URL}/user/profile`, {
                         method: "GET",
@@ -38,25 +47,115 @@ export default function SettingsScreen() {
                     const data = await response.json();
                     if (response.ok && data.user) {
                         setProfile(data.user);
+                        currentProfile = data.user;
+                        
+                        // Use activeSubscription from profile if available
+                        if (currentProfile.activeSubscription) {
+                            const fetchedPlan = {
+                                ...currentProfile.activeSubscription,
+                                description: "Active Subscription Plan"
+                            };
+                            setActivePlan(fetchedPlan);
+                            setActivatedAt(currentProfile.activeSubscription.activatedAt);
+                            
+                            // Save it back to AsyncStorage to keep it in sync (optional but good practice)
+                            await AsyncStorage.setItem("selectedPlan", JSON.stringify(fetchedPlan));
+                            await AsyncStorage.setItem("planActivatedAt", currentProfile.activeSubscription.activatedAt);
+                            
+                            return; // Stop here, we got the active plan directly from profile
+                        }
+                    }
+                }
+
+                // Fallback to AsyncStorage if no activeSubscription in profile
+                const planString = await AsyncStorage.getItem("selectedPlan");
+                const activatedAtString = await AsyncStorage.getItem("planActivatedAt");
+                
+                if (planString) {
+                    setActivePlan(JSON.parse(planString));
+                    setActivatedAt(activatedAtString);
+                } else {
+                    const isSub = await AsyncStorage.getItem("isSubscribed");
+                    if (isSub === "true") {
+                        const fallbackPlan = {
+                            planId: "PLNSILVER",
+                            name: "Active Plan",
+                            category: currentProfile?.businessCategory || "hotel",
+                            price: 199,
+                            durationInDays: 30,
+                            features: ["Basic Business Setup"],
+                            description: "Subscription active on account",
+                            status: "active"
+                        };
+                        setActivePlan(fallbackPlan);
+                        const mockDate = new Date();
+                        mockDate.setDate(mockDate.getDate() - 3);
+                        setActivatedAt(mockDate.toISOString());
                     }
                 }
             } catch (error) {
-                console.error("Error fetching profile", error);
+                console.error("Error fetching profile and plan", error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchProfile();
+        fetchProfileAndPlan();
     }, []);
 
     const handleConfirmLogout = async () => {
         try {
             await AsyncStorage.removeItem("userToken");
+            await AsyncStorage.removeItem("isSubscribed");
+            await AsyncStorage.removeItem("selectedPlan");
+            await AsyncStorage.removeItem("planActivatedAt");
             setShowLogoutModal(false);
             router.replace("/signup");
         } catch (error) {
             console.error("Error clearing token:", error);
             Alert.alert("Error", "Failed to log out. Please try again.");
+        }
+    };
+
+    const handleEditProfile = () => {
+        setEditName(profile?.name || "");
+        setEditBusinessName(profile?.businessName || "");
+        setShowEditModal(true);
+    };
+
+    const handleSaveProfile = async () => {
+        if (!editName.trim() || !editBusinessName.trim()) {
+            Alert.alert("Error", "Name and Business Name cannot be empty.");
+            return;
+        }
+
+        try {
+            setSavingProfile(true);
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(`${BASE_URL}/user/complete-profile`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: editName,
+                    businessName: editBusinessName
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok && data.user) {
+                setProfile(data.user);
+                setShowEditModal(false);
+                Alert.alert("Success", "Profile updated successfully.");
+            } else {
+                Alert.alert("Update Failed", data.message || "Failed to update profile.");
+            }
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            Alert.alert("Error", "Something went wrong. Please try again.");
+        } finally {
+            setSavingProfile(false);
         }
     };
 
@@ -82,18 +181,34 @@ export default function SettingsScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {/* Hotel Name Banner (Edge-to-Edge) */}
+                {/* Profile Details Card */}
                 <View style={styles.hotelBanner}>
                     <View style={styles.bannerRow}>
                         <View style={styles.avatarContainer}>
-                            <Ionicons name="business" size={32} color="#ffb703" />
+                            <Ionicons name="person" size={28} color="#ffb703" />
                         </View>
                         <View style={styles.profileDetails}>
-                            <Text style={styles.businessName}>{profile?.businessName || "Your Hotel"}</Text>
-                            <Text style={styles.categoryBadge}>{(profile?.businessCategory || "Hotel").toUpperCase()}</Text>
+                            <Text style={styles.businessName}>{profile?.businessName || "Your Business"}</Text>
+                            <Text style={styles.categoryBadge}>{(profile?.businessCategory || "Category").toUpperCase()}</Text>
+                        </View>
+                        <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+                            <Ionicons name="pencil" size={18} color="#0c831f" />
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.profileInfoList}>
+                        <View style={styles.infoRow}>
+                            <Ionicons name="person-outline" size={16} color="#666" />
+                            <Text style={styles.infoText}>{profile?.name || "User Name"}</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <Ionicons name="call-outline" size={16} color="#666" />
+                            <Text style={styles.infoText}>{profile?.mobileNo || "Mobile Number"}</Text>
                         </View>
                     </View>
                 </View>
+
+                {/* Active Plan Card Component */}
+                <ActivePlanCard plan={activePlan} activatedAtString={activatedAt} />
 
                 {/* Management Section (Edge-to-Edge) */}
                 <View style={styles.sectionContainer}>
@@ -103,8 +218,12 @@ export default function SettingsScreen() {
                             <Ionicons name="restaurant-outline" size={20} color="#00695c" />
                         </View>
                         <View style={styles.actionTextWrapper}>
-                            <Text style={styles.actionLabel}>Hotel Items</Text>
-                            <Text style={styles.actionSubtitle}>Add and manage hotel items/rates</Text>
+                            <Text style={styles.actionLabel}>
+                                {profile?.businessCategory ? `${profile.businessCategory.charAt(0).toUpperCase() + profile.businessCategory.slice(1)} Items` : "Hotel Items"}
+                            </Text>
+                            <Text style={styles.actionSubtitle}>
+                                Add and manage {profile?.businessCategory ? profile.businessCategory.toLowerCase() : "hotel"} items/rates
+                            </Text>
                         </View>
                         <Ionicons name="chevron-forward-outline" size={18} color="#999" />
                     </TouchableOpacity>
@@ -121,9 +240,32 @@ export default function SettingsScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Actions Section (Edge-to-Edge) */}
+                {/* Actions Section */}
                 <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>Actions</Text>
+                    <Text style={styles.sectionTitle}>General Options</Text>
+                    
+                    <TouchableOpacity style={styles.edgeRow} onPress={() => router.push("/Appaboutus")}>
+                        <View style={[styles.infoIconWrapper, { backgroundColor: "#fff3e0" }]}>
+                            <Ionicons name="information-circle-outline" size={20} color="#f57c00" />
+                        </View>
+                        <View style={styles.actionTextWrapper}>
+                            <Text style={styles.actionLabel}>About Us</Text>
+                            <Text style={styles.actionSubtitle}>Know more about Vyapar Setu</Text>
+                        </View>
+                        <Ionicons name="chevron-forward-outline" size={18} color="#999" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.edgeRow} onPress={() => router.push("/HelpSupport")}>
+                        <View style={[styles.infoIconWrapper, { backgroundColor: "#e3f2fd" }]}>
+                            <Ionicons name="help-buoy-outline" size={20} color="#1565c0" />
+                        </View>
+                        <View style={styles.actionTextWrapper}>
+                            <Text style={styles.actionLabel}>Help & Support</Text>
+                            <Text style={styles.actionSubtitle}>Get help for your account</Text>
+                        </View>
+                        <Ionicons name="chevron-forward-outline" size={18} color="#999" />
+                    </TouchableOpacity>
+
                     <TouchableOpacity style={styles.edgeRow} onPress={() => setShowLogoutModal(true)}>
                         <View style={[styles.infoIconWrapper, { backgroundColor: "#ffebee" }]}>
                             <Ionicons name="log-out-outline" size={20} color="#d32f2f" />
@@ -136,6 +278,44 @@ export default function SettingsScreen() {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+
+            {/* Edit Profile Modal */}
+            <Modal visible={showEditModal} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Edit Profile</Text>
+                        
+                        <Text style={styles.inputLabel}>Full Name</Text>
+                        <TextInput
+                            style={styles.inputField}
+                            value={editName}
+                            onChangeText={setEditName}
+                            placeholder="Enter your name"
+                        />
+                        
+                        <Text style={styles.inputLabel}>Business Name</Text>
+                        <TextInput
+                            style={styles.inputField}
+                            value={editBusinessName}
+                            onChangeText={setEditBusinessName}
+                            placeholder="Enter business name"
+                        />
+                        
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowEditModal(false)}>
+                                <Text style={styles.cancelBtnText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.saveBtn} onPress={handleSaveProfile} disabled={savingProfile}>
+                                {savingProfile ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <Text style={styles.saveBtnText}>Save</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             <LogoutModal
                 visible={showLogoutModal}
@@ -261,5 +441,99 @@ const styles = StyleSheet.create({
         color: "#999",
         fontWeight: "500",
         marginTop: 2,
+    },
+    editButton: {
+        padding: 8,
+        backgroundColor: "#e8f5e9",
+        borderRadius: 20,
+    },
+    profileInfoList: {
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: "#f1f3f5",
+        gap: 8,
+    },
+    infoRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    infoText: {
+        fontSize: 14,
+        color: "#444",
+        fontWeight: "600",
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+    },
+    modalContent: {
+        backgroundColor: "#fff",
+        width: "100%",
+        borderRadius: 20,
+        padding: 24,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#000",
+        marginBottom: 20,
+    },
+    inputLabel: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#555",
+        marginBottom: 8,
+    },
+    inputField: {
+        backgroundColor: "#f5f5f5",
+        borderRadius: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        fontSize: 16,
+        color: "#000",
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: "#eee",
+    },
+    modalButtons: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        gap: 12,
+        marginTop: 8,
+    },
+    cancelBtn: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 10,
+        backgroundColor: "#f5f5f5",
+    },
+    cancelBtnText: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#555",
+    },
+    saveBtn: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 10,
+        backgroundColor: "#0c831f",
+        justifyContent: "center",
+        alignItems: "center",
+        minWidth: 90,
+    },
+    saveBtnText: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#fff",
     },
 });

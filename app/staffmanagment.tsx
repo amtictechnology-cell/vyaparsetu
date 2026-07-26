@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import { BASE_URL } from '../constants/Config';
 import React, { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -61,7 +62,7 @@ const FloatingLabelInput = ({ label, value, onChangeText, ...props }: any) => {
         }),
         color: animatedIsFocused.interpolate({
             inputRange: [0, 1],
-            outputRange: ["#aaa", "#0c831f"],
+            outputRange: ["#aaa", "#ff6600"],
         }),
         backgroundColor: "#fff",
         paddingHorizontal: 4,
@@ -77,7 +78,7 @@ const FloatingLabelInput = ({ label, value, onChangeText, ...props }: any) => {
                 {...props}
                 style={[
                     styles.input,
-                    isFocused && { borderColor: "#0c831f" }
+                    isFocused && { borderColor: "#ff6600" }
                 ]}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
@@ -143,7 +144,7 @@ export default function StaffManagement() {
     const fetchTodayAttendance = async () => {
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch("http://192.168.31.192:6000/api/v1/staff/get-attendance", {
+            const response = await fetch(`${BASE_URL}/staff/get-attendance`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -184,7 +185,7 @@ export default function StaffManagement() {
             }
 
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch("http://192.168.31.192:6000/api/v1/staff/get-staff", {
+            const response = await fetch(`${BASE_URL}/staff/get-staff`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -313,7 +314,7 @@ export default function StaffManagement() {
                 } as any);
             }
 
-            const response = await fetch("http://192.168.31.192:6000/api/v1/staff/add", {
+            const response = await fetch(`${BASE_URL}/staff/add`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`,
@@ -367,8 +368,8 @@ export default function StaffManagement() {
             const token = await AsyncStorage.getItem("userToken");
             const isEditing = !!attendanceRecords[selectedStaff.staffId];
             const url = isEditing
-                ? "http://192.168.31.192:6000/api/v1/staff/edit-attendance"
-                : "http://192.168.31.192:6000/api/v1/staff/mark-attendance";
+                ? `${BASE_URL}/staff/edit-attendance`
+                : `${BASE_URL}/staff/mark-attendance`;
 
             const response = await fetch(url, {
                 method: "POST",
@@ -541,12 +542,12 @@ export default function StaffManagement() {
                         </Text>
 
                         {isProcessingAttendance ? (
-                            <ActivityIndicator size="large" color="#0c831f" style={{ marginVertical: 30 }} />
+                            <ActivityIndicator size="large" color="#ff6600" style={{ marginVertical: 30 }} />
                         ) : (
                             <View style={styles.attendanceOptions}>
                                 <TouchableOpacity style={[styles.optionBtn, styles.bgPresent]} onPress={() => handleMarkAttendance("present")}>
                                     <View style={[styles.iconWrapper, styles.bgPresentIcon]}>
-                                        <Ionicons name="checkmark-circle" size={26} color="#0c831f" />
+                                        <Ionicons name="checkmark-circle" size={26} color="#ff6600" />
                                     </View>
                                     <Text style={[styles.optionText, styles.textPresent]}>Present</Text>
                                 </TouchableOpacity>
@@ -692,7 +693,7 @@ const styles = StyleSheet.create({
     staffName: { fontSize: 18, fontWeight: "800", color: "#333" },
     staffRole: { fontSize: 12, color: "#666", fontWeight: "600" },
     salaryBadge: { backgroundColor: "#e8f5e9", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    salaryText: { color: "#0c831f", fontWeight: "800" },
+    salaryText: { color: "#ff6600", fontWeight: "800" },
     cardFooter: { flexDirection: "row", justifyContent: 'space-between', alignItems: "center", borderTopWidth: 1, borderTopColor: "#f0f0f0", paddingTop: 12 },
     footerItem: { flexDirection: "row", alignItems: "center", gap: 4 },
     footerText: { fontSize: 13, color: "#666", fontWeight: "600" },
@@ -713,7 +714,7 @@ const styles = StyleSheet.create({
     bgAbsent: { backgroundColor: "#ffebee" },
     bgHalfDay: { backgroundColor: "#fff8e1" },
     bgLeave: { backgroundColor: "#e3f2fd" },
-    textPresent: { color: "#0c831f" },
+    textPresent: { color: "#ff6600" },
     textAbsent: { color: "#d32f2f" },
     textHalfDay: { color: "#b45309" },
     textLeave: { color: "#023e8a" },
@@ -737,7 +738,7 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         justifyContent: "center",
         alignItems: "center",
         elevation: 6,
@@ -753,14 +754,14 @@ const styles = StyleSheet.create({
     label: { fontSize: 14, fontWeight: "700", color: "#333", marginBottom: 8 },
     roleScroll: { marginBottom: 8 },
     roleChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: "#f0f0f0", marginRight: 8 },
-    activeRoleChip: { backgroundColor: "#0c831f" },
+    activeRoleChip: { backgroundColor: "#ff6600" },
     roleChipText: { fontWeight: "600", color: "#666" },
     activeRoleChipText: { color: "#fff" },
     imageUploadSection: { flexDirection: 'row', gap: 16, marginTop: 8 },
     imagePicker: { flex: 1, height: 100, borderRadius: 12, borderWidth: 1.5, borderColor: "#eee", borderStyle: "dashed", justifyContent: "center", alignItems: "center", overflow: 'hidden' },
     previewImg: { width: '100%', height: '100%' },
     imagePickerText: { fontSize: 12, color: "#666", marginTop: 4 },
-    saveButton: { height: 56, backgroundColor: "#0c831f", borderRadius: 12, justifyContent: "center", alignItems: "center", marginTop: 16, marginBottom: 40 },
+    saveButton: { height: 56, backgroundColor: "#ff6600", borderRadius: 12, justifyContent: "center", alignItems: "center", marginTop: 16, marginBottom: 40 },
     saveButtonText: { color: "#fff", fontSize: 18, fontWeight: "800" },
     emptyContainer: { alignItems: "center", marginTop: 40 },
     emptyText: { fontSize: 16, color: "#999", fontWeight: "600" },

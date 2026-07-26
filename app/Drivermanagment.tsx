@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { BASE_URL } from "../constants/Config";
 import {
     ActivityIndicator,
     Alert,
@@ -20,6 +21,7 @@ import {
     View,
 } from "react-native";
 import DriverLoader from '../components/DriverLoader';
+import { LinearGradient } from "expo-linear-gradient";
 
 interface Driver {
     id: string;
@@ -59,7 +61,7 @@ const FloatingLabelInput = ({ label, value, onChangeText, ...props }: any) => {
         }),
         color: animatedIsFocused.interpolate({
             inputRange: [0, 1],
-            outputRange: ["#aaa", "#0c831f"],
+            outputRange: ["#aaa", "#ff6600"],
         }),
         backgroundColor: "#fff",
         paddingHorizontal: 4,
@@ -75,7 +77,7 @@ const FloatingLabelInput = ({ label, value, onChangeText, ...props }: any) => {
                 {...props}
                 style={[
                     styles.input,
-                    isFocused && { borderColor: "#0c831f" }
+                    isFocused && { borderColor: "#ff6600" }
                 ]}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
@@ -119,7 +121,7 @@ export default function DriverManagement() {
         setIsFetching(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch("http://192.168.31.192:6000/api/v1/hotel/get-all-driver", {
+            const response = await fetch(`${BASE_URL}/hotel/get-all-driver`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -211,7 +213,7 @@ export default function DriverManagement() {
             const nextSr = (drivers.length + 1).toString();
             const token = await AsyncStorage.getItem("userToken");
             
-            let url = "http://192.168.31.192:6000/api/v1/hotel/add-driver";
+            let url = `${BASE_URL}/hotel/add-driver`;
             let method = "POST";
             let payload: any = {
                 SRnumber: nextSr,
@@ -226,7 +228,7 @@ export default function DriverManagement() {
             };
 
             if (isEditMode) {
-                url = "http://192.168.31.192:6000/api/v1/hotel/edit-driver";
+                url = `${BASE_URL}/hotel/edit-driver`;
                 method = "PATCH"; // Using PATCH as per backend routes
                 payload = {
                     SRnumber: editSrNumber,
@@ -321,10 +323,10 @@ export default function DriverManagement() {
                 </View>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                     <TouchableOpacity style={styles.editButton} onPress={() => openEditModal(item)}>
-                        <Ionicons name="pencil" size={20} color="#0c831f" />
+                        <Ionicons name="pencil" size={20} color="#ff6600" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.callButton}>
-                        <Ionicons name="call" size={20} color="#0c831f" />
+                        <Ionicons name="call" size={20} color="#ff6600" />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -344,35 +346,40 @@ export default function DriverManagement() {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Driver managment</Text>
-                <View style={{ width: 40 }} />
-            </View>
-
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-                <View style={styles.searchBar}>
-                    <Ionicons name="search" size={20} color="#999" />
-                    <TextInput
-                        placeholder="Search driver or car number..."
-                        style={styles.searchInput}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
-                    {searchQuery !== "" && (
-                        <TouchableOpacity onPress={() => setSearchQuery("")}>
-                            <Ionicons name="close-circle" size={20} color="#999" />
-                        </TouchableOpacity>
-                    )}
+            <LinearGradient
+                colors={['#ff6600', '#ffb380']}
+                style={styles.gradientHeader}
+            >
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color="#ffffff" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Driver managment</Text>
+                    <View style={{ width: 40 }} />
                 </View>
-            </View>
+
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
+                    <View style={styles.searchBar}>
+                        <Ionicons name="search" size={20} color="#999" />
+                        <TextInput
+                            placeholder="Search driver or car number..."
+                            style={styles.searchInput}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                        />
+                        {searchQuery !== "" && (
+                            <TouchableOpacity onPress={() => setSearchQuery("")}>
+                                <Ionicons name="close-circle" size={20} color="#999" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+            </LinearGradient>
 
             {/* Driver List */}
             <FlatList
@@ -508,7 +515,7 @@ export default function DriverManagement() {
                         {isSuccess ? (
                             <View style={{ alignItems: 'center' }}>
                                 <View style={styles.successIconBox}>
-                                    <Ionicons name="checkmark-circle" size={60} color="#0c831f" />
+                                    <Ionicons name="checkmark-circle" size={60} color="#ff6600" />
                                 </View>
                                 <Text style={styles.animationText}>Success!</Text>
                             </View>
@@ -535,7 +542,7 @@ export default function DriverManagement() {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -544,6 +551,10 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#f8f9fa",
     },
+    gradientHeader: {
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+    },
     header: {
         flexDirection: "row",
         alignItems: "center",
@@ -551,7 +562,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 60,
         paddingBottom: 20,
-        backgroundColor: "#ffb703",
+        backgroundColor: "transparent",
     },
     backButton: {
         padding: 8,
@@ -559,11 +570,12 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 20,
         fontWeight: "900",
-        color: "#000",
+        color: "#ffffff",
     },
     searchContainer: {
         padding: 16,
-        backgroundColor: "#ffb703",
+        paddingTop: 0,
+        backgroundColor: "transparent",
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
     },
@@ -629,12 +641,12 @@ const styles = StyleSheet.create({
     },
     editButton: {
         padding: 8,
-        backgroundColor: "#e8f5e9",
+        backgroundColor: "#e6f0ff",
         borderRadius: 10,
     },
     callButton: {
         padding: 8,
-        backgroundColor: "#e8f5e9",
+        backgroundColor: "#e6f0ff",
         borderRadius: 10,
     },
     cardFooter: {
@@ -670,7 +682,7 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         justifyContent: "center",
         alignItems: "center",
         elevation: 6,
@@ -746,7 +758,7 @@ const styles = StyleSheet.create({
     },
     saveButton: {
         height: 56,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         borderRadius: 12,
         justifyContent: "center",
         alignItems: "center",
@@ -787,7 +799,7 @@ const styles = StyleSheet.create({
     animationText: {
         fontSize: 18,
         fontWeight: "900",
-        color: "#0c831f",
+        color: "#ff6600",
         marginTop: 8,
     },
     successIconBox: {

@@ -1,8 +1,10 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+import { BASE_URL } from '../../constants/Config';
 import {
     ActivityIndicator,
     Alert,
@@ -10,7 +12,6 @@ import {
     KeyboardAvoidingView,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -24,7 +25,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const BASE_URL = 'http://192.168.31.192:6000/api/v1';
+
 
 interface Transaction {
     _id: string;
@@ -393,3 +394,4 @@ const styles = StyleSheet.create({
     emptyContainer: { alignItems: 'center', marginTop: 100 },
     emptyText: { fontSize: 16, color: '#bbb', fontWeight: '700' }
 });
+

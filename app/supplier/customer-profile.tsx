@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,7 +12,6 @@ import {
     Linking,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -20,7 +20,7 @@ import {
     View,
 } from 'react-native';
 
-const BASE_URL = 'http://192.168.31.192:6000/api/v1';
+import { BASE_URL } from '../../constants/Config';
 
 // ---------- Types ----------
 interface BillItem {
@@ -76,35 +76,52 @@ export default function SupplierCustomerProfile() {
 
     const getToken = async () => AsyncStorage.getItem('userToken');
 
-    // ---------- Fetch customer ----------
-    useEffect(() => {
-        const fetchCustomerDetail = async () => {
-            if (!customerId) return;
-            try {
-                const token = await getToken();
-                const res = await fetch(`${BASE_URL}/supplier/customer?customerId=${customerId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    const found = Array.isArray(data.data)
-                        ? data.data.find((c: any) => c._id === customerId)
-                        : data.data;
-                    setCustomer(found);
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
+    // ---------- Load cached customer & bills ----------
+    const loadCachedProfileData = async () => {
+        if (!customerId) return;
+        try {
+            const cachedCust = await AsyncStorage.getItem(`supplier_customer_${customerId}`);
+            if (cachedCust) {
+                setCustomer(JSON.parse(cachedCust));
                 setLoading(false);
             }
-        };
-        fetchCustomerDetail();
-    }, [customerId]);
+            const cachedBills = await AsyncStorage.getItem(`supplier_customer_bills_${customerId}`);
+            if (cachedBills) {
+                setBills(JSON.parse(cachedBills));
+                setBillsLoading(false);
+            }
+        } catch (e) {
+            console.error('Failed to load cached profile data:', e);
+        }
+    };
+
+    // ---------- Fetch customer ----------
+    const fetchCustomerDetail = async () => {
+        if (!customerId) return;
+        try {
+            const token = await getToken();
+            const res = await fetch(`${BASE_URL}/supplier/customer?customerId=${customerId}`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                const found = Array.isArray(data.data)
+                    ? data.data.find((c: any) => c._id === customerId)
+                    : data.data;
+                setCustomer(found);
+                await AsyncStorage.setItem(`supplier_customer_${customerId}`, JSON.stringify(found));
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // ---------- Fetch bill history ----------
     const fetchBills = async () => {
         if (!customerId) return;
-        setBillsLoading(true);
+        if (bills.length === 0) setBillsLoading(true);
         try {
             const token = await getToken();
             const res = await fetch(`${BASE_URL}/supplier/bill?customerId=${customerId}`, {
@@ -113,6 +130,7 @@ export default function SupplierCustomerProfile() {
             const data = await res.json();
             if (res.ok && data.success) {
                 setBills(data.data || []);
+                await AsyncStorage.setItem(`supplier_customer_bills_${customerId}`, JSON.stringify(data.data || []));
             }
         } catch (e) {
             console.error('fetchBills error:', e);
@@ -122,7 +140,13 @@ export default function SupplierCustomerProfile() {
     };
 
     useEffect(() => {
-        fetchBills();
+        if (!customerId) return;
+        const init = async () => {
+            await loadCachedProfileData();
+            fetchCustomerDetail();
+            fetchBills();
+        };
+        init();
     }, [customerId]);
 
     // ---------- Fetch supplier rate list ----------
@@ -482,16 +506,7 @@ export default function SupplierCustomerProfile() {
                             </View>
                         </View>
 
-                        {/* Notes */}
-                        <TextInput
-                            style={styles.notesInput}
-                            value={notes}
-                            onChangeText={setNotes}
-                            placeholder="Notes (optional) — e.g. Kal tak payment ho jayegi"
-                            placeholderTextColor="#bbb"
-                            multiline
-                            numberOfLines={2}
-                        />
+                        
 
                         {/* Create Bill Button */}
                         <TouchableOpacity

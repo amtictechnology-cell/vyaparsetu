@@ -3,7 +3,6 @@ import {
     View,
     Text,
     StyleSheet,
-    SafeAreaView,
     TouchableOpacity,
     ScrollView,
     TextInput,
@@ -14,11 +13,12 @@ import {
     Platform,
     Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'http://192.168.31.192:6000/api/v1';
+import { BASE_URL } from '../../constants/Config';
 
 interface Customer {
     _id: string;
@@ -58,10 +58,22 @@ export default function SupplierCustomer() {
 
     const getToken = async () => AsyncStorage.getItem('userToken');
 
+    const loadCachedCustomers = async () => {
+        try {
+            const cached = await AsyncStorage.getItem('supplier_customers');
+            if (cached) {
+                setCustomers(JSON.parse(cached));
+                setLoading(false);
+            }
+        } catch (e) {
+            console.error('Failed to load cached customers:', e);
+        }
+    };
+
     const fetchCustomers = useCallback(async (isRefresh = false) => {
         try {
             if (isRefresh) setRefreshing(true);
-            else setLoading(true);
+            else if (customers.length === 0) setLoading(true);
 
             const token = await getToken();
             const res = await fetch(`${BASE_URL}/supplier/customer`, {
@@ -70,6 +82,7 @@ export default function SupplierCustomer() {
             const data = await res.json();
             if (res.ok && data.success) {
                 setCustomers(data.data);
+                await AsyncStorage.setItem('supplier_customers', JSON.stringify(data.data));
             }
         } catch (e) {
             console.error('Fetch error:', e);
@@ -77,11 +90,15 @@ export default function SupplierCustomer() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, []);
+    }, [customers.length]);
 
     useEffect(() => {
-        fetchCustomers();
-    }, [fetchCustomers]);
+        const init = async () => {
+            await loadCachedCustomers();
+            fetchCustomers();
+        };
+        init();
+    }, []);
 
     const resetForm = () => {
         setFormSR('');
@@ -170,17 +187,16 @@ export default function SupplierCustomer() {
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* Header Section */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                    <Ionicons name="arrow-back" size={24} color="#111" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>My Customers</Text>
+                <View style={{ width: 30 }} />
+            </View>
+
             <View style={styles.content}>
-                {/* Header Section */}
-                <View style={[styles.header, { paddingHorizontal: 20 }]}>
-                    <View>
-                        <Text style={styles.headerTitle}>My Customers</Text>
-                        <Text style={styles.headerSub}>Manage your party list</Text>
-                    </View>
-                    <TouchableOpacity style={styles.addMainBtn} onPress={handleAdd}>
-                        <Ionicons name="add" size={24} color="#fff" />
-                    </TouchableOpacity>
-                </View>
 
                 {/* Search Bar */}
                 <View style={[styles.searchContainer, { marginHorizontal: 20 }]}>
@@ -256,6 +272,11 @@ export default function SupplierCustomer() {
                     <View style={{ height: 100 }} />
                 </ScrollView>
             </View>
+
+            {/* Add Button at Bottom */}
+            <TouchableOpacity style={styles.bottomAddBtn} onPress={handleAdd}>
+                <Text style={styles.bottomAddBtnText}>+ Add New Customer</Text>
+            </TouchableOpacity>
 
             {/* Add / Edit Modal */}
             <Modal visible={modalVisible} animationType="slide" transparent>
@@ -364,12 +385,27 @@ export default function SupplierCustomer() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fdfdfd' },
-    content: { flex: 1, paddingTop: 20 },
+    content: { flex: 1, paddingTop: 10 },
     
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    headerTitle: { fontSize: 22, fontWeight: '900', color: '#111' },
-    headerSub: { fontSize: 13, color: '#888', fontWeight: '600' },
-    addMainBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#0c831f', justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#0c831f', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5 },
+    header: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        paddingHorizontal: 20, 
+        paddingVertical: 15, 
+        backgroundColor: '#ffd203', 
+        borderBottomWidth: 1, 
+        borderBottomColor: '#f0f0f0',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+    },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#111' },
+    backBtn: { padding: 4 },
+    bottomAddBtn: { backgroundColor: '#0c831f', marginHorizontal: 20, marginBottom: 15, padding: 16, borderRadius: 15, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#0c831f', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5 },
+    bottomAddBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
 
     searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f3f5', borderRadius: 15, paddingHorizontal: 15, paddingVertical: 10, marginBottom: 20 },
     searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#333' },

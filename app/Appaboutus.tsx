@@ -3,12 +3,12 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import {
     Linking,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
+    StatusBar,
 } from 'react-native';
 
 export default function Appaboutus() {
@@ -37,7 +37,8 @@ export default function Appaboutus() {
     ];
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color="#000" />
@@ -165,7 +166,7 @@ export default function Appaboutus() {
                 <Text style={styles.copyright}>© 2026 VyaparSetu. All rights reserved.</Text>
                 <View style={{ height: 32 }} />
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 

@@ -1,7 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { BASE_URL } from "../constants/Config";
 import {
     ActivityIndicator,
     Alert,
@@ -9,7 +11,6 @@ import {
     LayoutAnimation,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -23,6 +24,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import DriverLoader from '../components/DriverLoader';
+import { LinearGradient } from 'expo-linear-gradient';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -99,7 +101,7 @@ export default function DriverProfile() {
     const fetchEntriesData = async () => {
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch(`http://192.168.31.192:6000/api/v1/hotel/get-all-driver-entry?driverId=${driverId}`, {
+            const response = await fetch(`${BASE_URL}/hotel/get-all-driver-entry?driverId=${driverId}`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -121,7 +123,7 @@ export default function DriverProfile() {
         const fetchDriverData = async () => {
             try {
                 const token = await AsyncStorage.getItem("userToken");
-                const response = await fetch("http://192.168.31.192:6000/api/v1/hotel/get-all-driver", {
+                const response = await fetch(`${BASE_URL}/hotel/get-all-driver`, {
                     method: "GET",
                     headers: {
                         "Authorization": `Bearer ${token}`
@@ -145,7 +147,7 @@ export default function DriverProfile() {
             try {
                 const token = await AsyncStorage.getItem("userToken");
                 if (token) {
-                    const response = await fetch("http://192.168.31.192:6000/api/v1/user/profile", {
+                    const response = await fetch(`${BASE_URL}/user/profile`, {
                         method: "GET",
                         headers: { "Authorization": `Bearer ${token}` }
                     });
@@ -178,7 +180,7 @@ export default function DriverProfile() {
         setSavingEntry(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch("http://192.168.31.192:6000/api/v1/hotel/add-driver-entry", {
+            const response = await fetch(`${BASE_URL}/hotel/add-driver-entry`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -267,8 +269,8 @@ export default function DriverProfile() {
                         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
                         <style>
                             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
-                            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #0c831f; padding-bottom: 20px; }
-                            .logo { font-size: 32px; font-weight: bold; color: #0c831f; letter-spacing: 1px; }
+                            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #ff6600; padding-bottom: 20px; }
+                            .logo { font-size: 32px; font-weight: bold; color: #ff6600; letter-spacing: 1px; }
                             .sub-logo { font-size: 14px; color: #666; font-style: italic; }
                             
                             .info-sections { display: flex; justify-content: space-between; margin-bottom: 30px; }
@@ -278,15 +280,15 @@ export default function DriverProfile() {
                             .info-subtext { font-size: 14px; margin: 2px 0; color: #555; }
                             
                             table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-                            th { background-color: #0c831f; color: white; padding: 12px; text-align: left; }
+                            th { background-color: #ff6600; color: white; padding: 12px; text-align: left; }
                             td { padding: 10px; border-bottom: 1px solid #eee; }
                             tr:nth-child(even) { background-color: #fcfcfc; }
                             
-                            .summary-box { margin-top: 30px; padding: 15px; background: #e8f5e9; border-radius: 8px; text-align: right; }
-                            .summary-text { font-size: 18px; font-weight: bold; color: #0c831f; }
+                            .summary-box { margin-top: 30px; padding: 15px; background: #e6f0ff; border-radius: 8px; text-align: right; }
+                            .summary-text { font-size: 18px; font-weight: bold; color: #ff6600; }
                             
                             .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
-                            .status-completed { color: #0c831f; font-weight: bold; }
+                            .status-completed { color: #ff6600; font-weight: bold; }
                             .status-pending { color: #f57c00; font-weight: bold; }
                         </style>
                     </head>
@@ -326,7 +328,7 @@ export default function DriverProfile() {
                                 <tr>
                                     <td>${formatDate(entry.entryDate || entry.createdAt)}</td>
                                     <td>${entry.description || '-'} <br><span style="font-size:11px; color:#888;">${entry.foodTaken ? 'Included Food' : 'No Food'}</span></td>
-                                    <td style="font-weight: bold; color: #0c831f;">&#8377;${entry.driverCommisionAmount}</td>
+                                    <td style="font-weight: bold; color: #ff6600;">&#8377;${entry.driverCommisionAmount}</td>
                                     <td style="font-weight: bold;">&#8377;${entry.partyAmount}</td>
                                     <td class="${entry.status === 'completed' ? 'status-completed' : 'status-pending'}">${entry.status.toUpperCase()}</td>
                                 </tr>
@@ -382,49 +384,54 @@ export default function DriverProfile() {
 
     if (loading) {
         return (
-            <SafeAreaView style={styles.loadingContainer}>
+            <View style={styles.loadingContainer}>
                 <DriverLoader text="Loading Profile..." />
-            </SafeAreaView>
+            </View>
         );
     }
 
     if (!driver) {
         return (
-            <SafeAreaView style={styles.loadingContainer}>
+            <View style={styles.loadingContainer}>
                 <Ionicons name="alert-circle-outline" size={60} color="#ccc" />
                 <Text style={styles.errorText}>Driver Not Found</Text>
                 <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
                     <Text style={styles.backBtnText}>Go Back</Text>
                 </TouchableOpacity>
-            </SafeAreaView>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Driver Profile</Text>
-                <View style={{ width: 40 }} />
-            </View>
+            <LinearGradient
+                colors={['#ff6600', '#ffb380']}
+                style={styles.gradientHeader}
+            >
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
+                        <Ionicons name="arrow-back" size={24} color="#ffffff" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Driver Profile</Text>
+                    <View style={{ width: 40 }} />
+                </View>
+            </LinearGradient>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.profileCard}>
                     <View style={styles.headerRow}>
                         <View style={styles.avatarContainer}>
                             <Text style={styles.avatarText}>{driver.driverName?.charAt(0)?.toUpperCase() || 'D'}</Text>
-                            <View style={[styles.statusIndicator, { backgroundColor: driver.status === 'active' ? '#0c831f' : '#f44336' }]} />
+                            <View style={[styles.statusIndicator, { backgroundColor: driver.status === 'active' ? '#ff6600' : '#f44336' }]} />
                         </View>
                         <View style={styles.headerInfo}>
                             <Text style={styles.driverName}>{driver.driverName || "Unknown"}</Text>
                             <View style={styles.quickActions}>
                                 <TouchableOpacity style={styles.actionBtn}>
-                                    <Ionicons name="call" size={18} color="#0c831f" />
+                                    <Ionicons name="call" size={18} color="#ff6600" />
                                     <Text style={styles.actionText}>Call</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
@@ -449,7 +456,7 @@ export default function DriverProfile() {
                     {/* Expand/Collapse Toggle Button */}
                     <TouchableOpacity style={styles.toggleBtn} onPress={toggleExpand} activeOpacity={0.7}>
                         <Text style={styles.toggleText}>{isExpanded ? "Hide Details" : "View Details"}</Text>
-                        <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color="#0c831f" />
+                        <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color="#ff6600" />
                     </TouchableOpacity>
 
                     {isExpanded && (
@@ -503,7 +510,7 @@ export default function DriverProfile() {
                         </View>
                     </View>
                     <TouchableOpacity onPress={() => setDateFilterModal(true)} style={styles.filterIconBtn}>
-                        <Ionicons name="calendar-outline" size={20} color={activeFromDate ? "#0c831f" : "#555"} />
+                        <Ionicons name="calendar-outline" size={20} color={activeFromDate ? "#ff6600" : "#555"} />
                         {activeFromDate && <View style={styles.filterActiveDot} />}
                     </TouchableOpacity>
                 </View>
@@ -547,8 +554,8 @@ export default function DriverProfile() {
                                         <Ionicons name="calendar" size={12} color="#666" />
                                         <Text style={styles.entryDate}>{formatDate(entry.entryDate || entry.createdAt)}</Text>
                                     </View>
-                                    <View style={[styles.statusBadge, { backgroundColor: entry.status === 'completed' ? '#e8f5e9' : '#fff3e0' }]}>
-                                        <Text style={[styles.statusText, { color: entry.status === 'completed' ? '#0c831f' : '#f57c00' }]}>
+                                    <View style={[styles.statusBadge, { backgroundColor: entry.status === 'completed' ? '#e6f0ff' : '#fff3e0' }]}>
+                                        <Text style={[styles.statusText, { color: entry.status === 'completed' ? '#ff6600' : '#f57c00' }]}>
                                             {entry.status.toUpperCase()}
                                         </Text>
                                     </View>
@@ -774,7 +781,7 @@ export default function DriverProfile() {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -805,13 +812,17 @@ const styles = StyleSheet.create({
     backBtn: {
         paddingHorizontal: 24,
         paddingVertical: 12,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         borderRadius: 8,
     },
     backBtnText: {
         color: "#fff",
         fontWeight: "700",
         fontSize: 16,
+    },
+    gradientHeader: {
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
     },
     header: {
         flexDirection: "row",
@@ -820,7 +831,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 60,
         paddingBottom: 20,
-        backgroundColor: "#ffb703",
+        backgroundColor: "transparent",
     },
     headerBackButton: {
         padding: 8,
@@ -828,7 +839,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 20,
         fontWeight: "900",
-        color: "#000",
+        color: "#ffffff",
     },
     scrollContent: {
         paddingBottom: 40,
@@ -855,18 +866,18 @@ const styles = StyleSheet.create({
         width: 70,
         height: 70,
         borderRadius: 35,
-        backgroundColor: "#e8f5e9",
+        backgroundColor: "#e6f0ff",
         justifyContent: "center",
         alignItems: "center",
         borderWidth: 2,
-        borderColor: "#0c831f",
+        borderColor: "#ff6600",
         position: "relative",
         marginRight: 16,
     },
     avatarText: {
         fontSize: 32,
         fontWeight: "900",
-        color: "#0c831f",
+        color: "#ff6600",
     },
     statusIndicator: {
         width: 16,
@@ -918,7 +929,7 @@ const styles = StyleSheet.create({
     toggleText: {
         fontSize: 14,
         fontWeight: "700",
-        color: "#0c831f",
+        color: "#ff6600",
     },
     expandedContent: {
         marginTop: 16,
@@ -936,7 +947,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#0c831f',
+        backgroundColor: '#ff6600',
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 6,
@@ -1010,7 +1021,7 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: '#0c831f',
+        backgroundColor: '#ff6600',
     },
     radioText: {
         fontSize: 15,
@@ -1018,7 +1029,7 @@ const styles = StyleSheet.create({
         color: '#444',
     },
     saveBtn: {
-        backgroundColor: '#0c831f',
+        backgroundColor: '#ff6600',
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
@@ -1063,7 +1074,7 @@ const styles = StyleSheet.create({
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: '#0c831f',
+        backgroundColor: '#ff6600',
         borderWidth: 1,
         borderColor: '#fff',
     },
@@ -1083,8 +1094,8 @@ const styles = StyleSheet.create({
         borderColor: "transparent",
     },
     filterBtnActive: {
-        backgroundColor: "#e8f5e9",
-        borderColor: "#0c831f",
+        backgroundColor: "#e6f0ff",
+        borderColor: "#ff6600",
     },
     filterBtnText: {
         fontSize: 13,
@@ -1092,7 +1103,7 @@ const styles = StyleSheet.create({
         color: "#666",
     },
     filterBtnTextActive: {
-        color: "#0c831f",
+        color: "#ff6600",
     },
     dateModalContent: {
         backgroundColor: '#fff',
@@ -1123,7 +1134,7 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
     applyFilterBtn: {
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 12,
@@ -1139,7 +1150,7 @@ const styles = StyleSheet.create({
         color: "#000",
     },
     badge: {
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 12,
@@ -1234,7 +1245,7 @@ const styles = StyleSheet.create({
     },
     amountValueGreen: {
         fontSize: 15,
-        color: "#0c831f",
+        color: "#ff6600",
         fontWeight: "900",
     },
     foodTextMini: {
@@ -1268,3 +1279,4 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
 });
+

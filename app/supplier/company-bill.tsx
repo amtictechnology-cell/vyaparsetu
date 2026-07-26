@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useState } from 'react';
+import { BASE_URL } from '../../constants/Config';
 import {
     ActivityIndicator,
     Alert,
@@ -16,7 +17,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
-const BASE_URL = 'http://192.168.31.192:6000/api/v1';
+
 
 interface Company {
     _id: string;
@@ -206,8 +207,11 @@ export default function SupplierCompanyBill() {
         <View style={styles.container}>
 
             {/* ── Top Bar ── */}
-            <View style={styles.topBar}>
-                <View>
+            <View style={[styles.topBar, { paddingTop: Platform.OS === 'android' ? 40 : 20 }]}>
+                <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 15 }}>
+                    <Ionicons name="arrow-back" size={28} color="#111" />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
                     <Text style={styles.topTitle}>My Companies</Text>
                     <Text style={styles.topSub}>Apni companies manage karo</Text>
                 </View>
@@ -265,7 +269,7 @@ export default function SupplierCompanyBill() {
                 <View style={styles.center}>
                     <Ionicons name="business-outline" size={56} color="#ddd" />
                     <Text style={styles.emptyTitle}>Koi company nahi mili</Text>
-                    <Text style={styles.emptySub}>Pehli company add karne ke liye "Add" dabao</Text>
+                    <Text style={styles.emptySub}>{"Pehli company add karne ke liye \"Add\" dabao"}</Text>
                 </View>
             ) : (
                 <FlatList
@@ -571,3 +575,4 @@ const styles = StyleSheet.create({
     },
     modalSaveText: { fontSize: 14, fontWeight: '800', color: '#fff' },
 });
+

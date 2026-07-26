@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
@@ -5,13 +6,13 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { BASE_URL } from "../constants/Config";
 
 export default function OTPScreen() {
   const { mobile } = useLocalSearchParams<{ mobile: string }>();
@@ -40,7 +41,7 @@ export default function OTPScreen() {
     const enteredOtp = otp.join("");
     if (enteredOtp.length === 4) {
       try {
-        const response = await fetch("http://192.168.31.192:6000/api/v1/auth/verify-otp", {
+        const response = await fetch(`${BASE_URL}/auth/verify-otp`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -51,61 +52,45 @@ export default function OTPScreen() {
         const data = await response.json();
 
         if (response.ok) {
-          let routed = false;
-
           if (data?.token) {
             await AsyncStorage.setItem("userToken", data.token);
-
-            // Fetch profile using token to accurately check if user is new or existing
-            try {
-              const profileRes = await fetch("http://192.168.31.192:6000/api/v1/user/profile", {
-                method: "GET",
-                headers: {
-                  Authorization: `Bearer ${data.token}`,
-                },
-              });
-
-              if (profileRes.ok) {
-                const profileData = await profileRes.json();
-                const user = profileData?.user;
-
-                if (user) {
-                  const category = (user.businessCategory || "").toLowerCase();
-                  
-                  if (category === "shop") {
-                    router.replace("/Shop" as any);
-                    routed = true;
-                  } else if (category === "supplier" || category === "suppliers") {
-                    router.replace("/Supplier" as any);
-                    routed = true;
-                  } else if (category) {
-                    router.replace("/home" as any);
-                    routed = true;
-                  } else {
-                    router.replace({ pathname: "/information", params: { userId: user.userId } } as any);
-                    routed = true;
-                  }
-                }
-              }
-            } catch (err) {
-              console.error("Profile check after OTP error:", err);
-            }
           }
-          
-          if (!routed) {
-            // Fallback logic if profile fetch fails
-            if (data?.user?.isProfileCompleted || data?.user?.businessCategory) {
-              const category = (data.user?.businessCategory || "").toLowerCase();
-              if (category === "shop") {
-                router.replace("/Shop" as any);
-              } else if (category === "supplier" || category === "suppliers") {
-                router.replace("/Supplier" as any);
-              } else {
-                router.replace("/home" as any);
-              }
+
+          const user = data?.user;
+          if (user) {
+            const category = (user.businessCategory || "").toLowerCase();
+
+            if (!category) {
+              router.replace({ pathname: "/information", params: { userId: user.userId } } as any);
             } else {
-              router.replace({ pathname: "/information", params: { userId: data?.user?.userId } } as any);
+              // Check API response for active subscription, fallback to local storage
+              let hasActivePlan = false;
+              if (user.activeSubscription && user.activeSubscription.status === 'active') {
+                hasActivePlan = true;
+                await AsyncStorage.setItem("isSubscribed", "true");
+              } else {
+                const isSubscribedLocal = await AsyncStorage.getItem("isSubscribed");
+                hasActivePlan = isSubscribedLocal === "true";
+              }
+
+              if (hasActivePlan) {
+                if (category === "shop") {
+                  router.replace("/Shop" as any);
+                } else if (category === "supplier" || category === "suppliers") {
+                  router.replace("/supplier" as any);
+                } else if (category === "printing") {
+                  router.replace("/printing" as any);
+                } else if (category === "builder") {
+                  router.replace("/builder" as any);
+                } else {
+                  router.replace("/home" as any);
+                }
+              } else {
+                router.replace("/plans" as any);
+              }
             }
+          } else {
+            router.replace("/signup");
           }
         } else {
           Alert.alert("Invalid OTP", data.message || "Please enter the correct OTP.");
@@ -153,7 +138,7 @@ export default function OTPScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.resendButton}>
-          <Text style={styles.resendText}>Didn't receive code? <Text style={styles.resendLink}>Resend</Text></Text>
+          <Text style={styles.resendText}>{"Didn't receive code? "}<Text style={styles.resendLink}>Resend</Text></Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -202,7 +187,7 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 56,
-    backgroundColor: "#0c831f",
+    backgroundColor: "#ff6600",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
@@ -226,7 +211,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   resendLink: {
-    color: "#0c831f",
+    color: "#0059ff",
     fontWeight: "700",
   },
 });

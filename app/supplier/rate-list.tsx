@@ -1,18 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useState } from 'react';
+import { BASE_URL } from '../../constants/Config';
 import {
     ActivityIndicator, Alert, KeyboardAvoidingView, Modal,
     Platform, RefreshControl, ScrollView, StyleSheet,
     Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 
-const BASE_URL = 'http://192.168.31.192:6000/api/v1';
+
 
 interface RateItem { _id: string; itemName: string; itemPrice: number; }
 interface NewItem { itemName: string; itemPrice: string; }
 
 export default function SupplierRateList() {
+    const router = useRouter();
     const [rateList, setRateList] = useState<RateItem[]>([]);
     const [loadingList, setLoadingList] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -102,8 +105,13 @@ export default function SupplierRateList() {
             <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}
                 onScrollBeginDrag={() => setMenuItemId(null)}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchRateList(true)} colors={['#0c831f']} />}>
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>My Rate List</Text>
+                <View style={[styles.sectionHeader, { paddingTop: Platform.OS === 'android' ? 40 : 20 }]}>
+                    <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 15 }}>
+                        <Ionicons name="arrow-back" size={28} color="#111" />
+                    </TouchableOpacity>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.sectionTitle}>My Rate List</Text>
+                    </View>
                     <TouchableOpacity style={styles.addBtn} onPress={addNewRow} activeOpacity={0.8}>
                         <Ionicons name="add" size={18} color="#fff" />
                         <Text style={styles.addBtnText}>Add Item</Text>
@@ -143,7 +151,7 @@ export default function SupplierRateList() {
                         <View style={styles.centerBox}>
                             <Ionicons name="list-outline" size={40} color="#ddd" />
                             <Text style={styles.emptyText}>Koi item nahi hai</Text>
-                            <Text style={styles.emptySubText}>"Add Item" dabao aur apni rate list banao</Text>
+                            <Text style={styles.emptySubText}>{"\"Add Item\" dabao aur apni rate list banao"}</Text>
                         </View>
                     ) : (
                         rateList.map((item, index) => (
@@ -294,3 +302,4 @@ const styles = StyleSheet.create({
     modalSaveBtn: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 14, borderRadius: 14, backgroundColor: '#1565c0', elevation: 5, shadowColor: '#1565c0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8 },
     modalSaveText: { fontSize: 14, fontWeight: '800', color: '#fff' },
 });
+

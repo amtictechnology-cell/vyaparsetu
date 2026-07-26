@@ -7,7 +7,6 @@ import {
     Alert,
     FlatList,
     Modal,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -191,8 +190,8 @@ function PartyDetail({
     const settled = user.balance === 0;
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#c2185b" />
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
             {/* Header */}
             <View style={styles.header}>
@@ -338,7 +337,7 @@ function PartyDetail({
                     </TouchableOpacity>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -462,8 +461,8 @@ export default function KhataBookScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#c2185b" />
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
             {/* Header */}
             <View style={styles.header}>
@@ -723,7 +722,7 @@ export default function KhataBookScreen() {
                     )}
                 </View>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 }
 

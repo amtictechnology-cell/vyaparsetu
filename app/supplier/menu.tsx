@@ -1,12 +1,14 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
+import { BASE_URL } from '../../constants/Config';
+import SupplierDashboard from './dashboard';
 import {
     ActivityIndicator,
     Animated,
     Modal,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -27,7 +29,7 @@ export default function SupplierMenu() {
                 const token = await AsyncStorage.getItem('userToken');
                 if (token) {
                     const response = await fetch(
-                        'http://192.168.31.192:6000/api/v1/user/profile',
+                        `${BASE_URL}/user/profile`,
                         {
                             method: 'GET',
                             headers: { Authorization: `Bearer ${token}` },
@@ -65,6 +67,7 @@ export default function SupplierMenu() {
     const confirmLogout = async () => {
         try {
             await AsyncStorage.removeItem('userToken');
+            await AsyncStorage.removeItem('isSubscribed');
             setShowLogoutModal(false);
             router.replace('/signup');
         } catch (error) {
@@ -153,7 +156,7 @@ export default function SupplierMenu() {
                             <View style={styles.mobileRow}>
                                 <Ionicons name="call-outline" size={13} color="#0c831f" />
                                 <Text style={styles.mobileText}>
-                                    {profile?.mobile || profile?.phone || '+91 0000000000'}
+                                    {profile?.mobileNo || profile?.mobile || profile?.phone || '+91 0000000000'}
                                 </Text>
                                 <View style={styles.supplierBadge}>
                                     <Text style={styles.supplierBadgeText}>Supplier</Text>
@@ -165,18 +168,77 @@ export default function SupplierMenu() {
                     {/* Divider */}
                     <View style={styles.cardDivider} />
 
-                    {/* Your Information row */}
-                    <Text style={styles.infoSectionLabel}>Your Information</Text>
-                    <View style={styles.infoRow}>
-                        <View style={styles.infoIconBox}>
-                            <Ionicons name="person-outline" size={18} color="#0c831f" />
-                        </View>
-                        <View>
-                            <Text style={styles.infoLabel}>Full Name</Text>
-                            <Text style={styles.infoValue}>{profile?.name || 'N/A'}</Text>
+                    {/* Personal Information Card */}
+                    <View style={styles.detailCard}>
+                        <Text style={styles.infoSectionLabel}>Personal Details</Text>
+                        <View style={styles.infoRow}>
+                            <View style={styles.infoIconBox}>
+                                <Ionicons name="person-outline" size={18} color="#0c831f" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.infoLabel}>Full Name</Text>
+                                <Text style={styles.infoValue}>{profile?.name || 'N/A'}</Text>
+                            </View>
                         </View>
                     </View>
+
+                    {/* Plan Information Card */}
+                    <View style={styles.detailCard}>
+                        <Text style={styles.infoSectionLabel}>Plan Details</Text>
+                        {profile?.activeSubscription ? (
+                            (() => {
+                                const sub = profile.activeSubscription;
+                                const activatedAt = new Date(sub.activatedAt).getTime();
+                                const expiresAt = new Date(sub.expiresAt).getTime();
+                                const now = Date.now();
+                                let progressPercent = 0;
+                                let remainingDays = 0;
+                                
+                                if (expiresAt > activatedAt) {
+                                    const total = expiresAt - activatedAt;
+                                    const remaining = expiresAt - now;
+                                    progressPercent = Math.max(0, Math.min(100, (remaining / total) * 100));
+                                    remainingDays = Math.ceil(remaining / (1000 * 60 * 60 * 24));
+                                }
+
+                                return (
+                                    <View style={styles.infoRow}>
+                                        <View style={styles.infoIconBox}>
+                                            <Ionicons name="star-outline" size={18} color="#e65100" />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.infoLabel}>Plan Name: <Text style={styles.infoValue}>{sub.name}</Text></Text>
+                                            <Text style={styles.infoLabel}>Price: ₹{sub.price}</Text>
+                                            <Text style={[styles.infoLabel, { marginTop: 4 }]}>Duration: {sub.durationInDays} days</Text>
+                                            <Text style={styles.infoLabel}>Expires On: {new Date(sub.expiresAt).toLocaleDateString()}</Text>
+                                            
+                                            {/* Progress Bar */}
+                                            <View style={styles.progressContainer}>
+                                                <View style={[styles.progressBar, { width: `${progressPercent}%`, backgroundColor: progressPercent > 20 ? '#0c831f' : '#d32f2f' }]} />
+                                            </View>
+                                            <Text style={styles.progressText}>
+                                                {remainingDays > 0 ? `${remainingDays} days remaining` : 'Expired'}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                );
+                            })()
+                        ) : (
+                            <View style={styles.infoRow}>
+                                <View style={styles.infoIconBox}>
+                                    <Ionicons name="alert-circle-outline" size={18} color="#d32f2f" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.infoLabel}>Status</Text>
+                                    <Text style={styles.infoValue}>No Active Plan</Text>
+                                </View>
+                            </View>
+                        )}
+                    </View>
                 </View>
+
+                {/* ── Dashboard ── */}
+                <SupplierDashboard />
 
                 {/* ── Quick Access ── */}
                 <Text style={styles.sectionTitle}>Quick Access</Text>
@@ -333,6 +395,35 @@ const styles = StyleSheet.create({
     },
     infoLabel: { fontSize: 11, color: '#aaa', fontWeight: '600', marginBottom: 2 },
     infoValue: { fontSize: 14, color: '#222', fontWeight: '700' },
+    
+    /* Detail Cards inside Profile */
+    detailCard: {
+        backgroundColor: '#f8faff', // Light soft blue/grey background
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#e8efff',
+    },
+    progressContainer: {
+        height: 6,
+        backgroundColor: '#e0e0e0',
+        borderRadius: 3,
+        marginTop: 12,
+        overflow: 'hidden',
+        width: '100%',
+    },
+    progressBar: {
+        height: '100%',
+        borderRadius: 3,
+    },
+    progressText: {
+        fontSize: 10,
+        color: '#777',
+        marginTop: 6,
+        textAlign: 'right',
+        fontWeight: '600',
+    },
 
     /* Section Title */
     sectionTitle: {
@@ -450,3 +541,4 @@ const styles = StyleSheet.create({
     },
     confirmBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });
+

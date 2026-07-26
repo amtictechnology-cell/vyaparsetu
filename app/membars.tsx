@@ -1,11 +1,12 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
+import { BASE_URL } from "../constants/Config";
 import {
     Alert,
     Platform,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -27,7 +28,7 @@ type BookingEntry = {
     bookedAt: string;
 };
 
-const BASE_URL = "http://192.168.31.192:6000/api/v1";
+
 
 // In-memory store (replace with AsyncStorage / API as needed)
 export let roomBookings: BookingEntry[] = [];
@@ -550,3 +551,4 @@ const styles = StyleSheet.create({
     },
     toastText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });
+

@@ -1,7 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import { Animated, StyleSheet, View, ImageBackground } from "react-native";
+import { BASE_URL } from "../constants/Config";
 
 export default function LandingPage() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -30,13 +31,14 @@ export default function LandingPage() {
 
       try {
         const token = await AsyncStorage.getItem("userToken");
+        const isSubscribed = await AsyncStorage.getItem("isSubscribed");
 
         if (!token) {
           router.replace("/signup");
           return;
         }
 
-        const response = await fetch("http://192.168.31.192:6000/api/v1/user/profile", {
+        const response = await fetch(`${BASE_URL}/user/profile`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -49,22 +51,27 @@ export default function LandingPage() {
         }
 
         const data = await response.json();
+        const user = data?.user;
 
-        if (data?.user) {
-          const category = (data.user.businessCategory || "").toLowerCase();
+        if (user) {
+          const category = (user.businessCategory || "").toLowerCase();
 
-          if (category === "shop") {
-            router.replace("/Shop" as any);
-          }
-          else if (category === "supplier" || category === "suppliers") {
-            router.replace("/supplier" as any);
-          }
-          else if (category) {
-            router.replace("/home" as any);
-          }
-          else {
+          if (!category) {
             // Token is valid, but profile is incomplete
-            router.replace({ pathname: "/information", params: { userId: data.user.userId } } as any);
+            router.replace({ pathname: "/information", params: { userId: user.userId } } as any);
+          } else if (isSubscribed !== "true") {
+            // Profile complete but plan not selected
+            router.replace("/plans" as any);
+          } else if (category === "shop") {
+            router.replace("/Shop" as any);
+          } else if (category === "supplier" || category === "suppliers") {
+            router.replace("/supplier" as any);
+          } else if (category === "printing") {
+            router.replace("/printing" as any);
+          } else if (category === "builder") {
+            router.replace("/builder" as any);
+          } else {
+            router.replace("/home" as any);
           }
         } else {
           router.replace("/signup");
@@ -78,7 +85,11 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <ImageBackground 
+      source={require("../assets/images/bg.png")} 
+      style={styles.container}
+      resizeMode="cover"
+    >
       <Animated.View style={[styles.mainContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         <Animated.Text style={styles.text}>
           <Animated.Text style={styles.vyaparText}>Vyapar</Animated.Text>
@@ -94,7 +105,7 @@ export default function LandingPage() {
           100% Bhartiya brand 🇮🇳
         </Animated.Text>
       </Animated.View>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -103,7 +114,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ffb703",
+    backgroundColor: "#ffffff",
   },
   mainContent: {
     alignItems: "center",
@@ -114,10 +125,10 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   vyaparText: {
-    color: "#000000",
+    color: "#0059ff",
   },
   setuText: {
-    color: "#0c831f",
+    color: "#ff6600",
   },
   tagline: {
     fontSize: 16,
@@ -139,3 +150,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
+

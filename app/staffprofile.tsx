@@ -1,3 +1,4 @@
+import { BASE_URL } from '../constants/Config';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
@@ -284,7 +285,7 @@ export default function StaffProfile() {
             <View style={[styles.khatabookContainer, { marginTop: 16 }]}>
                 <View style={styles.khatabookHeader}>
                     <View style={styles.detailsHeaderLeft}>
-                        <Ionicons name="cash-outline" size={24} color="#0c831f" />
+                        <Ionicons name="cash-outline" size={24} color="#ff6600" />
                         <Text style={styles.detailsHeaderText}>Staff Financial Balance</Text>
                     </View>
                 </View>
@@ -292,8 +293,8 @@ export default function StaffProfile() {
                 {/* Transactions Financial Summary */}
                 <View style={styles.khatabookSummary}>
                     <View style={[styles.summaryCard, { backgroundColor: '#e8f5e9' }]}>
-                        <Text style={[styles.summaryLabel, { color: '#0c831f' }]}>Total Given</Text>
-                        <Text style={[styles.summaryValue, { color: '#0c831f' }]}>₹{transSummary.totalGiven}</Text>
+                        <Text style={[styles.summaryLabel, { color: '#ff6600' }]}>Total Given</Text>
+                        <Text style={[styles.summaryValue, { color: '#ff6600' }]}>₹{transSummary.totalGiven}</Text>
                     </View>
                     <View style={[styles.summaryCard, { backgroundColor: '#ffebee' }]}>
                         <Text style={[styles.summaryLabel, { color: '#d32f2f' }]}>Total Taken</Text>
@@ -385,7 +386,7 @@ export default function StaffProfile() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: transType === 'give' ? '#0c831f' : '#d32f2f' }]}>
+                            <Text style={[styles.modalTitle, { color: transType === 'give' ? '#ff6600' : '#d32f2f' }]}>
                                 {transType === 'give' ? 'Give Money (पेमेन्ट दिया)' : 'Take Money (पेमेन्ट लिया)'}
                             </Text>
                             <TouchableOpacity onPress={() => setTransModalVisible(false)}>
@@ -444,7 +445,7 @@ export default function StaffProfile() {
                                 <TouchableOpacity 
                                     style={[
                                         styles.saveButton, 
-                                        { backgroundColor: transType === 'give' ? '#0c831f' : '#d32f2f' }
+                                        { backgroundColor: transType === 'give' ? '#ff6600' : '#d32f2f' }
                                     ]} 
                                     onPress={handleSubmitTransaction}
                                     disabled={submittingTrans}
@@ -732,7 +733,7 @@ export default function StaffProfile() {
                 } as any);
             }
 
-            const response = await fetch(`http://192.168.31.192:6000/api/v1/staff/transaction/${transType}`, {
+            const response = await fetch(`${BASE_URL}/staff/transaction/${transType}`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -769,7 +770,7 @@ export default function StaffProfile() {
                     onPress: async () => {
                         try {
                             const token = await AsyncStorage.getItem("userToken");
-                            const response = await fetch(`http://192.168.31.192:6000/api/v1/staff/transaction/delete`, {
+                            const response = await fetch(`${BASE_URL}/staff/transaction/delete`, {
                                 method: "DELETE",
                                 headers: {
                                     "Content-Type": "application/json",
@@ -802,7 +803,7 @@ export default function StaffProfile() {
         setIsKhatabookLoading(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch(`http://192.168.31.192:6000/api/v1/staff/khatabook/${sId}`, {
+            const response = await fetch(`${BASE_URL}/staff/khatabook/${sId}`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -829,7 +830,7 @@ export default function StaffProfile() {
         setLoadingTransactions(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch(`http://192.168.31.192:6000/api/v1/staff/transaction/get-transactions?staffId=${sId}`, {
+            const response = await fetch(`${BASE_URL}/staff/transaction/get-transactions?staffId=${sId}`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -850,7 +851,7 @@ export default function StaffProfile() {
     const fetchStaffData = async () => {
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch(`http://192.168.31.192:6000/api/v1/staff/get-staff?staffId=${staffId}`, {
+            const response = await fetch(`${BASE_URL}/staff/get-staff?staffId=${staffId}`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -928,7 +929,7 @@ export default function StaffProfile() {
                         <View style={styles.headerInfo}>
                             <Text style={styles.staffName}>{staff.firstName} {staff.lastName}</Text>
                             <View style={styles.mobileRow}>
-                                <Ionicons name="call" size={16} color="#0c831f" />
+                                <Ionicons name="call" size={16} color="#ff6600" />
                                 <Text style={styles.staffMobile}>{staff.mobile}</Text>
                             </View>
                             <View style={styles.badgeRow}>
@@ -947,7 +948,7 @@ export default function StaffProfile() {
                         activeOpacity={0.7}
                     >
                         <View style={styles.detailsHeaderLeft}>
-                            <Ionicons name="information-circle-outline" size={24} color="#0c831f" />
+                            <Ionicons name="information-circle-outline" size={24} color="#ff6600" />
                             <Text style={styles.detailsHeaderText}>Full Professional Details</Text>
                         </View>
                         <Ionicons
@@ -967,7 +968,7 @@ export default function StaffProfile() {
 
                             <View style={styles.divider} />
                             <Text style={styles.innerSectionTitle}>Employment</Text>
-                            <DetailItem icon="cash-outline" label="Monthly Salary" value={`₹${staff.salary}`} color="#0c831f" />
+                            <DetailItem icon="cash-outline" label="Monthly Salary" value={`₹${staff.salary}`} color="#ff6600" />
                             <DetailItem icon="calendar-outline" label="Joined Date" value={new Date(staff.createdAt).toLocaleDateString()} />
 
                             <View style={styles.divider} />
@@ -1066,7 +1067,7 @@ const styles = StyleSheet.create({
     staffMobile: { fontSize: 16, color: "#666", fontWeight: "600" },
     badgeRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     roleBadge: { backgroundColor: "#e8f5e9", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-    roleText: { color: "#0c831f", fontWeight: "800", fontSize: 10 },
+    roleText: { color: "#ff6600", fontWeight: "800", fontSize: 10 },
     idBadge: { backgroundColor: "#f0f0f0", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
     idBadgeText: { color: "#666", fontWeight: "800", fontSize: 10 },
     detailsContainer: { margin: 16, backgroundColor: '#fff', borderRadius: 16, elevation: 2, overflow: 'hidden' },
@@ -1123,12 +1124,12 @@ const styles = StyleSheet.create({
     statusBadgeText: { fontSize: 10, fontWeight: '900' },
     ledgerYear: { fontSize: 10, color: '#bbb', marginTop: 2, fontWeight: '600' },
     amountCol: { alignItems: 'flex-end' },
-    ledgerAmount: { fontSize: 16, fontWeight: '800', color: '#0c831f' },
+    ledgerAmount: { fontSize: 16, fontWeight: '800', color: '#ff6600' },
     bgPresent: { backgroundColor: "#e8f5e9" },
     bgAbsent: { backgroundColor: "#ffebee" },
     bgHalfDay: { backgroundColor: "#fff8e1" },
     bgLeave: { backgroundColor: "#e3f2fd" },
-    textPresent: { color: "#0c831f" },
+    textPresent: { color: "#ff6600" },
     textAbsent: { color: "#d32f2f" },
     textHalfDay: { color: "#b45309" },
     textLeave: { color: "#023e8a" },
@@ -1259,12 +1260,12 @@ const styles = StyleSheet.create({
     netPaybillLabel: {
         fontSize: 16,
         fontWeight: '800',
-        color: '#0c831f',
+        color: '#ff6600',
     },
     netPaybillValue: {
         fontSize: 20,
         fontWeight: '900',
-        color: '#0c831f',
+        color: '#ff6600',
     },
     netBalanceBox: {
         marginHorizontal: 16,
@@ -1422,7 +1423,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     btnGive: {
-        backgroundColor: '#0c831f',
+        backgroundColor: '#ff6600',
     },
     btnTake: {
         backgroundColor: '#d32f2f',

@@ -1,13 +1,14 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { BASE_URL } from "../constants/Config";
 import {
     ActivityIndicator,
     Alert,
     Platform,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -16,7 +17,7 @@ import {
     View,
 } from "react-native";
 
-const BASE_URL = "http://192.168.31.192:6000/api/v1";
+
 
 export default function TrackRecordScreen() {
     const router = useRouter();
@@ -339,43 +340,42 @@ const styles = StyleSheet.create({
         color: "#000",
     },
     scrollContent: {
-        paddingVertical: 16,
+        paddingVertical: 20,
         paddingHorizontal: 16,
     },
     filterSection: {
         marginBottom: 24,
     },
     sectionTitle: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: "800",
         color: "#555",
         textTransform: "uppercase",
-        letterSpacing: 0.8,
-        marginBottom: 12,
+        letterSpacing: 1,
+        marginBottom: 14,
     },
     filterButtonsRow: {
         flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 16,
+        backgroundColor: "#eef2f5",
+        borderRadius: 14,
+        padding: 4,
+        marginBottom: 20,
     },
     filterButton: {
         flex: 1,
-        backgroundColor: "#fff",
-        borderWidth: 1,
-        borderColor: "#e0e0e0",
-        borderRadius: 12,
         paddingVertical: 12,
         alignItems: "center",
-        marginHorizontal: 4,
-        elevation: 1,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
+        justifyContent: "center",
+        borderRadius: 10,
+        backgroundColor: "transparent",
     },
     activeFilterButton: {
-        backgroundColor: "#0c831f",
-        borderColor: "#0c831f",
+        backgroundColor: "#fff",
+        elevation: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     filterButtonText: {
         fontSize: 13,
@@ -383,7 +383,8 @@ const styles = StyleSheet.create({
         color: "#666",
     },
     activeFilterButtonText: {
-        color: "#fff",
+        color: "#0c831f",
+        fontWeight: "800",
     },
     calendarContainer: {
         backgroundColor: "#fff",
@@ -405,11 +406,12 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#f9f9f9",
-        borderWidth: 1,
-        borderColor: "#eee",
+        backgroundColor: "#f8f9fa",
+        borderWidth: 1.5,
+        borderColor: "#eef2f5",
         borderRadius: 12,
-        padding: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
         marginHorizontal: 4,
     },
     dateIcon: {
@@ -444,29 +446,27 @@ const styles = StyleSheet.create({
         flexDirection: "column",
     },
     card: {
-        backgroundColor: "#fff",
-        borderRadius: 20,
+        borderRadius: 18,
         padding: 20,
         marginBottom: 16,
-        elevation: 3,
+        borderWidth: 1.5,
+        elevation: 2,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
+        shadowOpacity: 0.05,
         shadowRadius: 6,
-        borderWidth: 1,
-        borderColor: "#f1f1f1",
     },
     roomCard: {
-        borderLeftWidth: 6,
-        borderLeftColor: "#1565c0",
+        backgroundColor: "#f0f7ff",
+        borderColor: "#d0e3ff",
     },
     billingCard: {
-        borderLeftWidth: 6,
-        borderLeftColor: "#2e7d32",
+        backgroundColor: "#f0faf0",
+        borderColor: "#d2ebd2",
     },
     pendingCard: {
-        borderLeftWidth: 6,
-        borderLeftColor: "#e65100",
+        backgroundColor: "#fff6f0",
+        borderColor: "#ffe0cc",
     },
     cardHeaderRow: {
         flexDirection: "row",
@@ -482,22 +482,23 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     cardTitle: {
-        fontSize: 16,
-        fontWeight: "800",
+        fontSize: 15,
+        fontWeight: "700",
         color: "#444",
     },
     cardBody: {
         alignItems: "flex-start",
     },
     cardValue: {
-        fontSize: 32,
+        fontSize: 34,
         fontWeight: "900",
-        color: "#222",
+        color: "#111",
     },
     cardSubtitle: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#888",
-        marginTop: 4,
+        color: "#666",
+        marginTop: 2,
     },
 });
+

@@ -13,7 +13,6 @@ import {
     Modal,
     Platform,
     RefreshControl,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -32,7 +31,7 @@ interface HotelItem {
     itemImage?: string;
 }
 
-const BASE_URL = "http://192.168.31.192:6000/api/v1";
+import { BASE_URL } from "../constants/Config";
 
 const FloatingLabelInput = ({ label, value, onChangeText, ...props }: any) => {
     const [isFocused, setIsFocused] = useState(false);
@@ -361,8 +360,8 @@ export default function AddItemScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
             {/* Header */}
             <View style={styles.header}>
@@ -516,7 +515,7 @@ export default function AddItemScreen() {
                     <Text style={styles.toastText}>{toastMessage}</Text>
                 </View>
             )}
-        </SafeAreaView>
+        </View>
     );
 }
 

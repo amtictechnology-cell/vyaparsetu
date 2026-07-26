@@ -1,16 +1,17 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { BASE_URL } from "../constants/Config";
 
 export default function SignupScreen() {
   const [mobile, setMobile] = useState("");
@@ -29,7 +30,7 @@ export default function SignupScreen() {
   const handleContinue = async () => {
     if (mobile.length === 10) {
       try {
-        const response = await fetch("http://192.168.31.192:6000/api/v1/auth/send/otp", {
+        const response = await fetch(`${BASE_URL}/auth/send/otp`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -56,8 +57,8 @@ export default function SignupScreen() {
         style={styles.content}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Vyapar<Text style={styles.greenText}>Setu</Text></Text>
-          <Text style={styles.subtitle}>India's No. 1 Business App</Text>
+          <Text style={styles.title}>Vyapar<Text style={styles.setuText}>Setu</Text></Text>
+          <Text style={styles.subtitle}>{"India's No. 1 Business App"}</Text>
         </View>
 
         <View style={styles.card}>
@@ -102,7 +103,7 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffb703",
+    backgroundColor: "#ffffff",
   },
   content: {
     flex: 1,
@@ -116,11 +117,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 42,
     fontWeight: "900",
-    color: "#000",
+    color: "#0059ff",
     letterSpacing: -1,
   },
-  greenText: {
-    color: "#0c831f",
+  setuText: {
+    color: "#ff6600",
   },
   subtitle: {
     fontSize: 14,
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ccc",
   },
   buttonActive: {
-    backgroundColor: "#0c831f",
+    backgroundColor: "#0059ff",
   },
   buttonDisabled: {
     backgroundColor: "#a0a0a0",
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   link: {
-    color: "#0c831f",
+    color: "#0059ff",
     fontWeight: "700",
   },
 });

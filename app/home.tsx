@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ResizeMode, Video } from 'expo-av';
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -15,6 +16,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { BASE_URL, SERVER_URL } from "../constants/Config";
 
 
 const MENU_ITEMS = [
@@ -63,6 +65,7 @@ const MENU_ITEMS = [
 export default function HomeScreen() {
     const router = useRouter();
     const [profile, setProfile] = useState<any>(null);
+    const [settings, setSettings] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [greeting, setGreeting] = useState("Good Morning");
 
@@ -144,11 +147,24 @@ export default function HomeScreen() {
     }, []);
 
     useEffect(() => {
+        const fetchSettings = async (categoryName: string) => {
+            try {
+                const response = await fetch(`${BASE_URL}/settings/app/${categoryName.toLowerCase()}`);
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    const settingsData = Array.isArray(data.data) ? data.data[0] : data.data;
+                    setSettings(settingsData);
+                }
+            } catch (error) {
+                console.error("Error fetching settings:", error);
+            }
+        };
+
         const fetchProfile = async () => {
             try {
                 const token = await AsyncStorage.getItem("userToken");
                 if (token) {
-                    const response = await fetch("http://192.168.31.192:6000/api/v1/user/profile", {
+                    const response = await fetch(`${BASE_URL}/user/profile`, {
                         method: "GET",
                         headers: {
                             "Authorization": `Bearer ${token}`
@@ -157,6 +173,8 @@ export default function HomeScreen() {
                     const data = await response.json();
                     if (response.ok && data.user) {
                         setProfile(data.user);
+                        const categoryName = (data.user.businessCategory || "hotel").toLowerCase();
+                        fetchSettings(categoryName);
                     }
                 }
             } catch (error) {
@@ -185,50 +203,82 @@ export default function HomeScreen() {
         );
     }
 
+    const isCustomHeader = !!settings?.headerColor;
+    const headerBgColor = settings?.headerColor || "#ffb703";
+    const textPrimary = isCustomHeader ? "#ffffff" : "#000000";
+    const textSecondary = isCustomHeader ? "rgba(255,255,255,0.75)" : "#333333";
+    const settingsIconColor = isCustomHeader ? "#ffffff" : "#000000";
+    const hasVideo = settings?.isFestivalActive && settings?.festivalVideo;
+    const headerBorderRadius = hasVideo ? 0 : 35;
+
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+        <View style={styles.container}>
+            <StatusBar barStyle={isCustomHeader ? "light-content" : "dark-content"} backgroundColor={headerBgColor} />
 
             {/* Header */}
-            <View style={styles.header}>
-                {/* Top Row: Info + Logout */}
+            <View style={[
+                styles.header,
+                { 
+                    backgroundColor: headerBgColor,
+                    borderBottomLeftRadius: headerBorderRadius, 
+                    borderBottomRightRadius: headerBorderRadius 
+                }
+            ]}>
+                {/* Top Row: Info + Settings */}
                 <View style={styles.headerTop}>
                     <View style={styles.headerLeft}>
-                        <Text style={styles.greeting}>{greeting}</Text>
-                        <Text style={styles.businessName}>{profile?.businessName || "Your Business"}</Text>
+                        <Text style={[styles.greeting, { color: textSecondary }]}>{greeting}</Text>
+                        <Text style={[styles.businessName, { color: textPrimary }]}>{profile?.businessName || settings?.headerTitle || "Your Business"}</Text>
                         <View style={styles.locationContainer}>
-                            <Ionicons name="person" size={14} color="#0c831f" />
-                            <Text style={styles.locationText}>{profile?.name || "User Name"}</Text>
+                            <Ionicons name="person" size={14} color={isCustomHeader ? "#ffffff" : "#0c831f"} />
+                            <Text style={[styles.locationText, { color: textSecondary }]}>{profile?.name || "User Name"}</Text>
                         </View>
                     </View>
                     <TouchableOpacity style={styles.settingsButton} onPress={() => router.push("/settings")}>
-                        <Ionicons name="settings-outline" size={26} color="#000" />
+                        <Ionicons name="settings-outline" size={26} color={settingsIconColor} />
                     </TouchableOpacity>
                 </View>
 
-                {/* Bottom Row: Animated Powered By */}
-                <View style={styles.headerPoweredBy}>
-                    <View style={styles.pillContainer}>
-                        <Text style={styles.poweredByLabel}>Powered by</Text>
-                        
-                        <View style={styles.pillDivider} />
+                {/* Bottom Row: Animated Powered By (Only show if not playing a video to keep header compact) */}
+                {!hasVideo && (
+                    <View style={styles.headerPoweredBy}>
+                        <View style={styles.pillContainer}>
+                            <Text style={styles.poweredByLabel}>Powered by</Text>
+                            
+                            <View style={styles.pillDivider} />
 
-                        <Animated.View style={[
-                            styles.headerLogoContainer,
-                            {
-                                opacity: fadeAnim,
-                                transform: [{ scale: scaleAnim }]
-                            }
-                        ]}>
-                            <Image
-                                source={logos[logoIndex]}
-                                style={styles.headerLogo}
-                                resizeMode="contain"
-                            />
-                        </Animated.View>
+                            <Animated.View style={[
+                                styles.headerLogoContainer,
+                                {
+                                    opacity: fadeAnim,
+                                    transform: [{ scale: scaleAnim }]
+                                }
+                            ]}>
+                                <Image
+                                    source={logos[logoIndex]}
+                                    style={styles.headerLogo}
+                                    resizeMode="contain"
+                                />
+                            </Animated.View>
+                        </View>
                     </View>
-                </View>
+                )}
             </View>
+
+            {/* Festival Video Header (Conditional) */}
+            {hasVideo ? (
+                <View style={styles.videoHeaderContainer}>
+                    <Video
+                        source={{ uri: `${SERVER_URL}/${settings.festivalVideo}` }}
+                        style={styles.festivalVideo}
+                        resizeMode={ResizeMode.COVER}
+                        shouldPlay
+                        isLooping
+                        isMuted
+                        useNativeControls={false}
+                    />
+                </View>
+            ) : null}
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Menu Grid */}
@@ -273,7 +323,7 @@ export default function HomeScreen() {
             </ScrollView>
 
 
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -289,11 +339,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         borderBottomLeftRadius: 35,
         borderBottomRightRadius: 35,
-        elevation: 10,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#4e4e4d',
     },
     headerTop: {
         flexDirection: "row",
@@ -441,5 +488,19 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: "#666",
         marginTop: 4,
+    },
+    videoHeaderContainer: {
+        width: "100%",
+        height: 200,
+        backgroundColor: "#000",
+        overflow: "hidden",
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ffffff',
+    },
+    festivalVideo: {
+        width: "100%",
+        height: "100%",
     },
 });
