@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -186,7 +186,7 @@ export default function SupplierCustomer() {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['right', 'bottom', 'left']}>
             {/* Header Section */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -242,7 +242,7 @@ export default function SupplierCustomer() {
                                 })}
                             >
                                 <View style={[styles.custAvatar, { backgroundColor: cust.status === 'active' ? '#0c831f15' : '#eee' }]}>
-                                    <Text style={[styles.avatarText, { color: cust.status === 'active' ? '#0c831f' : '#666' }]}>
+                                    <Text style={[styles.avatarText, { color: cust.status === 'active' ? '#ff6600' : '#666' }]}>
                                         {cust.customerName.charAt(0).toUpperCase()}
                                     </Text>
                                 </View>
@@ -256,8 +256,8 @@ export default function SupplierCustomer() {
                                     </Text>
                                     <View style={styles.bottomRow}>
                                         <Text style={styles.mobileText}>📞 {cust.mobileNumber}</Text>
-                                        <View style={[styles.statusTag, { backgroundColor: cust.status === 'active' ? '#e8f5e9' : '#fafafa' }]}>
-                                            <Text style={[styles.statusTagText, { color: cust.status === 'active' ? '#0c831f' : '#888' }]}>
+                                        <View style={[styles.statusTag, { backgroundColor: cust.status === 'active' ? '#fff5eb' : '#fafafa' }]}>
+                                            <Text style={[styles.statusTagText, { color: cust.status === 'active' ? '#ff6600' : '#888' }]}>
                                                 {cust.status}
                                             </Text>
                                         </View>
@@ -392,8 +392,8 @@ const styles = StyleSheet.create({
         alignItems: 'center', 
         justifyContent: 'space-between', 
         paddingHorizontal: 20, 
-        paddingVertical: 15, 
-        backgroundColor: '#ffd203', 
+        paddingVertical: 15, paddingTop: Platform.OS === 'ios' ? 50 : 60, 
+        backgroundColor: '#ff6600', 
         borderBottomWidth: 1, 
         borderBottomColor: '#f0f0f0',
         elevation: 2,
@@ -402,9 +402,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 3,
     },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#111' },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
     backBtn: { padding: 4 },
-    bottomAddBtn: { backgroundColor: '#0c831f', marginHorizontal: 20, marginBottom: 15, padding: 16, borderRadius: 15, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#0c831f', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5 },
+    bottomAddBtn: { backgroundColor: '#ff6600', marginHorizontal: 20, marginBottom: 15, padding: 16, borderRadius: 15, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#ff6600', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5 },
     bottomAddBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
 
     searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f3f5', borderRadius: 15, paddingHorizontal: 15, paddingVertical: 10, marginBottom: 20 },
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
 
     emptyState: { alignItems: 'center', marginTop: 100, paddingHorizontal: 20 },
     emptyText: { fontSize: 16, fontWeight: '700', color: '#bbb', marginTop: 10 },
-    emptyAddBtn: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#0c831f', borderRadius: 20 },
+    emptyAddBtn: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#ff6600', borderRadius: 20 },
     emptyAddBtnText: { color: '#fff', fontWeight: '700' },
 
     custCard: { 
@@ -431,8 +431,8 @@ const styles = StyleSheet.create({
     custSR: { 
         fontSize: 12, 
         fontWeight: '900', 
-        color: '#0c831f', 
-        backgroundColor: '#e8f5e9', 
+        color: '#ff6600', 
+        backgroundColor: '#fff5eb', 
         paddingHorizontal: 8, 
         paddingVertical: 3, 
         borderRadius: 6 
@@ -450,12 +450,12 @@ const styles = StyleSheet.create({
     modalTitle: { fontSize: 18, fontWeight: '900', color: '#111' },
     formGroup: { marginBottom: 20 },
     label: { fontSize: 13, fontWeight: '700', color: '#555', marginBottom: 8 },
-    formInput: { backgroundColor: '#f8f9fa', borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 15, fontSize: 15, color: '#333' },
-    submitBtn: { backgroundColor: '#0c831f', padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 10, marginBottom: 20 },
+    formInput: { backgroundColor: '#f8f9fa', borderWidth: 1, borderColor: '#ff6600', borderRadius: 12, padding: 15, fontSize: 15, color: '#333' },
+    submitBtn: { backgroundColor: '#ff6600', padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 10, marginBottom: 20 },
     submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
     statusPicker: { flexDirection: 'row', gap: 10 },
-    statusOpt: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#eee', alignItems: 'center', backgroundColor: '#fcfcfc' },
-    statusOptActive: { backgroundColor: '#e8f5e9', borderColor: '#0c831f' },
+    statusOpt: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#ff6600', alignItems: 'center', backgroundColor: '#fcfcfc' },
+    statusOptActive: { backgroundColor: '#fff5eb', borderColor: '#ff6600' },
     statusOptInactive: { backgroundColor: '#ffebee', borderColor: '#d32f2f' },
     statusOptText: { fontWeight: '700', color: '#888' },
     statusOptTextActive: { color: '#fff', backgroundColor: 'transparent' },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#0c831f',
+        backgroundColor: '#ff6600',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
@@ -501,3 +501,5 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
 });
+
+

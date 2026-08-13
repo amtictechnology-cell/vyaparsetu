@@ -29,6 +29,7 @@ interface HotelItem {
     unit: string;
     rate: number;
     itemImage?: string;
+    category?: string;
 }
 
 import { BASE_URL } from "../constants/Config";
@@ -58,7 +59,7 @@ const FloatingLabelInput = ({ label, value, onChangeText, ...props }: any) => {
         }),
         color: animatedIsFocused.interpolate({
             inputRange: [0, 1],
-            outputRange: ["#aaa", "#0c831f"],
+            outputRange: ["#aaa", "#ff6600"],
         }),
         backgroundColor: "#fff",
         paddingHorizontal: 4,
@@ -74,7 +75,7 @@ const FloatingLabelInput = ({ label, value, onChangeText, ...props }: any) => {
                 {...props}
                 style={[
                     styles.input,
-                    isFocused && { borderColor: "#0c831f" }
+                    isFocused && { borderColor: "#ff6600" }
                 ]}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
@@ -102,7 +103,11 @@ export default function AddItemScreen() {
     const [unit, setUnit] = useState("");
     const [rate, setRate] = useState("");
     const [itemImage, setItemImage] = useState<string | null>(null);
+    const [category, setCategory] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
+
+    // New states for cart and filtering
+    const [selectedCategory, setSelectedCategory] = useState("All");
 
     const showToast = (msg: string) => {
         setToastMessage(msg);
@@ -192,8 +197,8 @@ export default function AddItemScreen() {
     };
 
     const handleAction = async () => {
-        if (!itemName || !unit || !rate) {
-            Alert.alert("ValidationError", "Please fill all required fields.");
+        if (!itemName || !unit || !rate || !category) {
+            Alert.alert("ValidationError", "Please fill all required fields, including Category.");
             return;
         }
 
@@ -202,6 +207,7 @@ export default function AddItemScreen() {
         formData.append("itemName", itemName);
         formData.append("unit", unit);
         formData.append("rate", rate);
+        formData.append("category", category);
 
         if (editingId) {
             formData.append("itemId", editingId);
@@ -285,6 +291,7 @@ export default function AddItemScreen() {
         setItemName("");
         setUnit("");
         setRate("");
+        setCategory("");
         setItemImage(null);
         setEditingId(null);
     };
@@ -293,6 +300,7 @@ export default function AddItemScreen() {
         setItemName(item.itemName);
         setUnit(item.unit);
         setRate(String(item.rate));
+        setCategory(item.category || "");
         
         // Resolve image URL
         if (item.itemImage) {
@@ -316,43 +324,50 @@ export default function AddItemScreen() {
         return `${BASE_URL.replace("/api/v1", "")}/${cleanPath}`;
     };
 
-    const filteredItems = items.filter((item) =>
-        (item.itemName || "").toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const availableCategories = ["All", ...Array.from(new Set(items.map(i => i.category).filter(Boolean)))];
+    
+    const filteredItems = items.filter((item) => {
+        const matchesSearch = (item.itemName || "").toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+    });
 
     const renderItemCard = ({ item }: { item: HotelItem }) => {
         const imageUrl = resolveImageUrl(item.itemImage || "");
+        const id = item.itemId || item._id;
 
         return (
-            <View style={styles.card}>
-                <View style={styles.cardContent}>
-                    <View style={styles.itemImageContainer}>
-                        {imageUrl ? (
-                            <Image source={{ uri: imageUrl }} style={styles.itemImg} />
-                        ) : (
-                            <Ionicons name="restaurant" size={30} color="#ffb703" />
-                        )}
-                    </View>
-                    <View style={styles.itemInfo}>
-                        <Text style={styles.itemName}>{item.itemName}</Text>
-                        <View style={styles.priceUnitRow}>
-                            <Text style={styles.itemPrice}>₹{item.rate}</Text>
-                            <Text style={styles.unitText}>/ {item.unit}</Text>
-                        </View>
-                    </View>
-                    <View style={styles.actionButtons}>
-                        <TouchableOpacity onPress={() => handleEdit(item)} style={styles.editBtn}>
-                            <Ionicons name="create" size={18} color="#f57c00" />
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                            onPress={() => {
-                                setIdToDelete(item.itemId || item._id);
-                                setShowDeleteConfirm(true);
-                            }} 
-                            style={styles.deleteBtn}
-                        >
-                            <Ionicons name="trash" size={18} color="#d32f2f" />
-                        </TouchableOpacity>
+            <View style={styles.gridCard}>
+                {/* Admin controls at absolute top right */}
+                <View style={styles.adminControlsOverlay}>
+                    <TouchableOpacity onPress={() => handleEdit(item)} style={styles.adminEditBtn}>
+                        <Ionicons name="pencil" size={14} color="#0059ff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        onPress={() => {
+                            setIdToDelete(id);
+                            setShowDeleteConfirm(true);
+                        }} 
+                        style={styles.adminDeleteBtn}
+                    >
+                        <Ionicons name="trash" size={14} color="#d32f2f" />
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.gridImageContainer}>
+                    {imageUrl ? (
+                        <Image source={{ uri: imageUrl }} style={styles.gridItemImg} />
+                    ) : (
+                        <Ionicons name="restaurant" size={40} color="#ffb380" />
+                    )}
+                </View>
+
+                <View style={styles.gridItemInfo}>
+                    <Text style={styles.gridItemName} numberOfLines={2}>{item.itemName}</Text>
+                    <Text style={styles.gridUnitText}>{item.unit}</Text>
+                    
+                    <View style={styles.gridPriceActionRow}>
+                        <Text style={styles.gridItemPrice}>₹{item.rate}</Text>
                     </View>
                 </View>
             </View>
@@ -366,7 +381,7 @@ export default function AddItemScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Hotel Items</Text>
                 <View style={{ width: 40 }} />
@@ -385,25 +400,51 @@ export default function AddItemScreen() {
                 </View>
             </View>
 
-            {/* Item List */}
-            <FlatList
-                data={filteredItems}
-                renderItem={renderItemCard}
-                keyExtractor={(item) => item.itemId || item._id || Math.random().toString()}
-                contentContainerStyle={styles.listContent}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={() => fetchItems(true)} colors={["#0c831f"]} />
-                }
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        {loading ? (
-                            <ActivityIndicator size="large" color="#0c831f" />
-                        ) : (
-                            <Text style={styles.emptyText}>No items found</Text>
-                        )}
-                    </View>
-                }
-            />
+            {/* Main Content Split View */}
+            <View style={styles.mainSplitContainer}>
+                {/* Sidebar Categories */}
+                <View style={styles.sidebar}>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {availableCategories.map(cat => (
+                            <TouchableOpacity 
+                                key={cat} 
+                                style={[styles.sidebarItem, selectedCategory === cat && styles.sidebarItemSelected]}
+                                onPress={() => setSelectedCategory(cat as string)}
+                            >
+                                <Text style={[styles.sidebarItemText, selectedCategory === cat && styles.sidebarItemTextSelected]}>
+                                    {cat}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+
+                {/* Right Side Items Grid */}
+                <View style={styles.itemsGridContainer}>
+                    <FlatList
+                        data={filteredItems}
+                        renderItem={renderItemCard}
+                        keyExtractor={(item) => item.itemId || item._id || Math.random().toString()}
+                        numColumns={2}
+                        columnWrapperStyle={styles.rowWrapper}
+                        contentContainerStyle={styles.listContent}
+                        refreshControl={
+                            <RefreshControl refreshing={refreshing} onRefresh={() => fetchItems(true)} colors={["#ff6600"]} />
+                        }
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                {loading ? (
+                                    <ActivityIndicator size="large" color="#ff6600" />
+                                ) : (
+                                    <Text style={styles.emptyText}>No items found</Text>
+                                )}
+                            </View>
+                        }
+                    />
+                </View>
+            </View>
+
+
 
             {/* Floating Action Button */}
             <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
@@ -447,6 +488,27 @@ export default function AddItemScreen() {
                                     onChangeText={setRate}
                                     keyboardType="numeric"
                                 />
+
+                                <Text style={styles.imageLabel}>Category</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryContainer}>
+                                    {["Roti", "Sabji", "Cold Drink", "BreakFast"].map((cat) => (
+                                        <TouchableOpacity
+                                            key={cat}
+                                            style={[
+                                                styles.categoryChip,
+                                                category === cat && styles.categoryChipSelected
+                                            ]}
+                                            onPress={() => setCategory(cat)}
+                                        >
+                                            <Text style={[
+                                                styles.categoryChipText,
+                                                category === cat && styles.categoryChipTextSelected
+                                            ]}>
+                                                {cat}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
 
                                 <Text style={styles.imageLabel}>Item Image</Text>
                                 <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
@@ -531,7 +593,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: Platform.OS === 'android' ? 40 : 10,
         paddingBottom: 20,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
     },
     backButton: {
         padding: 8,
@@ -539,11 +601,11 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 20,
         fontWeight: "900",
-        color: "#000",
+        color: "#fff",
     },
     searchContainer: {
         padding: 16,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
     },
@@ -567,78 +629,190 @@ const styles = StyleSheet.create({
         fontWeight: "600",
     },
     listContent: {
-        padding: 16,
+        paddingTop: 12,
+        paddingHorizontal: 8,
         paddingBottom: 100,
     },
-    card: {
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 12,
-        marginBottom: 12,
-        elevation: 3,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-    },
-    cardContent: {
+    mainSplitContainer: {
+        flex: 1,
         flexDirection: "row",
+    },
+    sidebar: {
+        width: "22%",
+        backgroundColor: "#fff",
+        borderRightWidth: 1,
+        borderColor: "#eee",
+    },
+    sidebarItem: {
+        paddingVertical: 16,
+        paddingHorizontal: 8,
+        borderBottomWidth: 1,
+        borderColor: "#f5f5f5",
         alignItems: "center",
     },
-    itemImageContainer: {
-        width: 60,
-        height: 60,
+    sidebarItemSelected: {
+        backgroundColor: "#fff5eb",
+        borderRightWidth: 3,
+        borderRightColor: "#ff6600",
+    },
+    sidebarItemText: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: "#666",
+        textAlign: "center",
+    },
+    sidebarItemTextSelected: {
+        color: "#ff6600",
+        fontWeight: "900",
+    },
+    itemsGridContainer: {
+        flex: 1,
+        backgroundColor: "#f8f9fa",
+    },
+    rowWrapper: {
+        justifyContent: "space-between",
+        paddingHorizontal: 8,
+    },
+    gridCard: {
+        width: "49%",
+        backgroundColor: "#fff",
         borderRadius: 12,
-        backgroundColor: "#fffdeb",
-        borderWidth: 1,
-        borderColor: "#ffe082",
+        marginBottom: 12,
+        overflow: "hidden",
+        elevation: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        paddingBottom: 8,
+    },
+    gridImageContainer: {
+        width: "100%",
+        height: 100,
+        backgroundColor: "#fff5eb",
         justifyContent: "center",
         alignItems: "center",
-        marginRight: 14,
-        overflow: "hidden",
     },
-    itemImg: {
+    gridItemImg: {
         width: "100%",
         height: "100%",
         resizeMode: "cover",
     },
-    itemInfo: {
+    gridItemInfo: {
+        padding: 8,
         flex: 1,
     },
-    itemName: {
-        fontSize: 16,
+    gridItemName: {
+        fontSize: 13,
         fontWeight: "800",
         color: "#333",
+        marginBottom: 2,
     },
-    priceUnitRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 4,
-    },
-    itemPrice: {
-        fontSize: 15,
-        fontWeight: "800",
-        color: "#0c831f",
-    },
-    unitText: {
-        fontSize: 12,
+    gridUnitText: {
+        fontSize: 11,
         color: "#777",
         fontWeight: "600",
-        marginLeft: 4,
+        marginBottom: 8,
     },
-    actionButtons: {
+    gridPriceActionRow: {
         flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: "auto",
+    },
+    gridItemPrice: {
+        fontSize: 15,
+        fontWeight: "900",
+        color: "#000",
+    },
+    addBtn: {
+        backgroundColor: "#fff",
+        borderWidth: 1,
+        borderColor: "#0059ff",
+        borderRadius: 6,
+        paddingVertical: 4,
+        paddingHorizontal: 12,
+    },
+    addBtnText: {
+        color: "#0059ff",
+        fontSize: 12,
+        fontWeight: "900",
+    },
+    qtyControlBox: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#0059ff",
+        borderRadius: 6,
+    },
+    qtyBtn: {
+        padding: 4,
+    },
+    qtyText: {
+        color: "#fff",
+        fontSize: 13,
+        fontWeight: "900",
+        paddingHorizontal: 6,
+    },
+    adminControlsOverlay: {
+        position: "absolute",
+        top: 6,
+        right: 6,
+        zIndex: 10,
+        flexDirection: "row",
+        gap: 6,
+    },
+    adminEditBtn: {
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
+        padding: 6,
+        borderRadius: 20,
+    },
+    adminDeleteBtn: {
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
+        padding: 6,
+        borderRadius: 20,
+    },
+    bottomCartBar: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: "#fff",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderColor: "#eee",
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    cartItemsCount: {
+        fontSize: 12,
+        color: "#666",
+        fontWeight: "700",
+    },
+    cartTotalText: {
+        fontSize: 18,
+        fontWeight: "900",
+        color: "#000",
+    },
+    viewCartBtn: {
+        backgroundColor: "#ff6600",
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 12,
         gap: 8,
     },
-    editBtn: {
-        backgroundColor: "#fff3e0",
-        padding: 10,
-        borderRadius: 10,
-    },
-    deleteBtn: {
-        backgroundColor: "#ffebee",
-        padding: 10,
-        borderRadius: 10,
+    viewCartBtnText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "900",
     },
     fab: {
         position: "absolute",
@@ -647,7 +821,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         justifyContent: "center",
         alignItems: "center",
         elevation: 6,
@@ -697,6 +871,48 @@ const styles = StyleSheet.create({
         color: "#000",
         backgroundColor: "#fff",
     },
+    categoryScroll: {
+        marginBottom: 16,
+    },
+    categoryContainer: {
+        gap: 10,
+        paddingVertical: 4,
+    },
+    categoryChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: "#f0f0f0",
+        borderWidth: 1,
+        borderColor: "#ddd",
+        marginRight: 8,
+    },
+    categoryChipSelected: {
+        backgroundColor: "#fff5eb",
+        borderColor: "#ff6600",
+    },
+    categoryChipText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#666",
+    },
+    categoryChipTextSelected: {
+        color: "#ff6600",
+        fontWeight: "800",
+    },
+    itemCategoryBadge: {
+        marginTop: 6,
+        alignSelf: "flex-start",
+        backgroundColor: "#e6f0ff",
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 8,
+    },
+    itemCategoryText: {
+        fontSize: 10,
+        fontWeight: "700",
+        color: "#0059ff",
+    },
     imageLabel: {
         fontSize: 14,
         fontWeight: "800",
@@ -727,7 +943,7 @@ const styles = StyleSheet.create({
     },
     saveButton: {
         height: 56,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         borderRadius: 12,
         justifyContent: "center",
         alignItems: "center",

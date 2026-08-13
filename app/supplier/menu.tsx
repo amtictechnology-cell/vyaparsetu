@@ -1,4 +1,4 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+﻿import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -117,7 +117,7 @@ export default function SupplierMenu() {
     if (loading) {
         return (
             <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color="#0c831f" />
+                <ActivityIndicator size="large" color="#ff6600" />
             </SafeAreaView>
         );
     }
@@ -130,11 +130,11 @@ export default function SupplierMenu() {
         .slice(0, 2);
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['right', 'bottom', 'left']}>
             {/* ── Header ── */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>My Profile</Text>
                 <View style={{ width: 40 }} />
@@ -154,7 +154,7 @@ export default function SupplierMenu() {
                                 {profile?.businessName || 'Business Name'}
                             </Text>
                             <View style={styles.mobileRow}>
-                                <Ionicons name="call-outline" size={13} color="#0c831f" />
+                                <Ionicons name="call-outline" size={13} color="#ff6600" />
                                 <Text style={styles.mobileText}>
                                     {profile?.mobileNo || profile?.mobile || profile?.phone || '+91 0000000000'}
                                 </Text>
@@ -173,7 +173,7 @@ export default function SupplierMenu() {
                         <Text style={styles.infoSectionLabel}>Personal Details</Text>
                         <View style={styles.infoRow}>
                             <View style={styles.infoIconBox}>
-                                <Ionicons name="person-outline" size={18} color="#0c831f" />
+                                <Ionicons name="person-outline" size={18} color="#ff6600" />
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.infoLabel}>Full Name</Text>
@@ -204,7 +204,7 @@ export default function SupplierMenu() {
                                 return (
                                     <View style={styles.infoRow}>
                                         <View style={styles.infoIconBox}>
-                                            <Ionicons name="star-outline" size={18} color="#e65100" />
+                                            <Ionicons name="star-outline" size={18} color="#ff6600" />
                                         </View>
                                         <View style={{ flex: 1 }}>
                                             <Text style={styles.infoLabel}>Plan Name: <Text style={styles.infoValue}>{sub.name}</Text></Text>
@@ -214,7 +214,7 @@ export default function SupplierMenu() {
                                             
                                             {/* Progress Bar */}
                                             <View style={styles.progressContainer}>
-                                                <View style={[styles.progressBar, { width: `${progressPercent}%`, backgroundColor: progressPercent > 20 ? '#0c831f' : '#d32f2f' }]} />
+                                                <View style={[styles.progressBar, { width: `${progressPercent}%`, backgroundColor: progressPercent > 20 ? '#ff6600' : '#d32f2f' }]} />
                                             </View>
                                             <Text style={styles.progressText}>
                                                 {remainingDays > 0 ? `${remainingDays} days remaining` : 'Expired'}
@@ -330,12 +330,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 52,
         paddingBottom: 16,
-        backgroundColor: '#fff',
+        backgroundColor: '#ff6600',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: '#e65c00',
     },
     backBtn: { padding: 4 },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#111' },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
 
     /* Profile Card (merged with info) */
     profileCard: {
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
         width: 62,
         height: 62,
         borderRadius: 31,
-        backgroundColor: '#0c831f',
+        backgroundColor: '#ff6600',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 14,
@@ -369,12 +369,12 @@ const styles = StyleSheet.create({
     mobileRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
     mobileText: { fontSize: 13, color: '#555', fontWeight: '600' },
     supplierBadge: {
-        backgroundColor: '#e8f5e9',
+        backgroundColor: '#fff5eb',
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 20,
     },
-    supplierBadgeText: { fontSize: 10, fontWeight: '700', color: '#0c831f' },
+    supplierBadgeText: { fontSize: 10, fontWeight: '700', color: '#ff6600' },
     cardDivider: { height: 1, backgroundColor: '#f0f0f0', marginBottom: 14 },
     infoSectionLabel: {
         fontSize: 11,
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 10,
-        backgroundColor: '#e8f5e9',
+        backgroundColor: '#fff5eb',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -398,12 +398,12 @@ const styles = StyleSheet.create({
     
     /* Detail Cards inside Profile */
     detailCard: {
-        backgroundColor: '#f8faff', // Light soft blue/grey background
+        backgroundColor: '#fff5eb', // Light orange background
         borderRadius: 12,
         padding: 16,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: '#e8efff',
+        borderColor: '#ffe0cc',
     },
     progressContainer: {
         height: 6,
@@ -541,4 +541,8 @@ const styles = StyleSheet.create({
     },
     confirmBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });
+
+
+
+
 

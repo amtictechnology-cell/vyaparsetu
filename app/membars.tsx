@@ -1,4 +1,4 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+﻿import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -14,9 +14,10 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    KeyboardAvoidingView,
 } from "react-native";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 type MemberInput = { name: string; id: string };
 type BookingEntry = {
     _id: string;
@@ -33,7 +34,7 @@ type BookingEntry = {
 // In-memory store (replace with AsyncStorage / API as needed)
 export let roomBookings: BookingEntry[] = [];
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// --- Component ----------------------------------------------------------------
 export default function AddMembers() {
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -42,20 +43,21 @@ export default function AddMembers() {
     const customerName = (params.customerName as string) ?? "Customer";
     const roomNumber = (params.roomNumber as string) ?? "N/A";
 
-    // Step 1 – pick member count
+    // Step 1 � pick member count
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [memberCount, setMemberCount] = useState<number | null>(null);
 
-    // Step 2 – fill member details
+    // Step 2 � fill member details
     const [members, setMembers] = useState<MemberInput[]>([]);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
     const showToast = (msg: string) => {
         setToastMessage(msg);
         setTimeout(() => setToastMessage(null), 1500);
     };
 
-    // ── Helpers ────────────────────────────────
+    // -- Helpers --------------------------------
     const handleSelectCount = (n: number) => setMemberCount(n);
 
     const goToStep2 = () => {
@@ -111,14 +113,14 @@ export default function AddMembers() {
         }
     };
 
-    // ── Render: Step 1 ─────────────────────────
+    // -- Render: Step 1 -------------------------
     if (step === 1) {
         return (
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+                <StatusBar barStyle="dark-content" backgroundColor="#ff6600" />
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#000" />
+                        <Ionicons name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Add Members & Room Allot</Text>
                     <View style={{ width: 40 }} />
@@ -128,7 +130,7 @@ export default function AddMembers() {
                     {/* Icon + Title */}
                     <View style={styles.iconCenter}>
                         <View style={styles.bigIconBox}>
-                            <Ionicons name="people" size={52} color="#023e8a" />
+                            <Ionicons name="people" size={52} color="#ff6600" />
                         </View>
                         <Text style={styles.stepTitle}>Manage Members</Text>
                         <Text style={styles.stepSub}>Select how many members to add for this booking</Text>
@@ -181,22 +183,23 @@ export default function AddMembers() {
         );
     }
 
-    // ── Render: Step 2 ─────────────────────────
+    // -- Render: Step 2 -------------------------
     if (step === 2) {
         return (
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+                <StatusBar barStyle="dark-content" backgroundColor="#ff6600" />
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => setStep(1)} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#000" />
+                        <Ionicons name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Member Details</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <Text style={[styles.stepTitle, { marginBottom: 4, textAlign: "left" }]}>
-                        Enter details for {memberCount} member{memberCount! > 1 ? "s" : ""}
+                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+                    <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                        <Text style={[styles.stepTitle, { marginBottom: 4, textAlign: "left" }]}>
+                            Enter details for {memberCount} member{memberCount! > 1 ? "s" : ""}
                     </Text>
                     <Text style={[styles.stepSub, { textAlign: "left", marginBottom: 20 }]}>
                         Fill in the name and ID for each member
@@ -212,28 +215,32 @@ export default function AddMembers() {
                             </View>
 
                             {/* Name Input */}
-                            <View style={styles.inputBox}>
-                                <Ionicons name="person-outline" size={20} color="#666" />
+                            <View style={[styles.inputBox, focusedInput === "name" + i && { borderColor: "#ff6600", backgroundColor: "#fff5eb" }]}>
+                                    <Ionicons name="person-outline" size={20} color={focusedInput === "name" + i ? "#ff6600" : "#666"} />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Member Name"
                                     placeholderTextColor="#aaa"
                                     value={m.name}
                                     onChangeText={v => updateMember(i, "name", v)}
-                                />
-                            </View>
+                                        onFocus={() => setFocusedInput("name" + i)}
+                                        onBlur={() => setFocusedInput(null)}
+                                    />
+                                </View>
 
                             {/* ID Input */}
-                            <View style={styles.inputBox}>
-                                <Ionicons name="card-outline" size={20} color="#666" />
+                            <View style={[styles.inputBox, focusedInput === "id" + i && { borderColor: "#ff6600", backgroundColor: "#fff5eb" }]}>
+                                    <Ionicons name="card-outline" size={20} color={focusedInput === "id" + i ? "#ff6600" : "#666"} />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="ID Number (Aadhar / PAN / etc.)"
                                     placeholderTextColor="#aaa"
                                     value={m.id}
                                     onChangeText={v => updateMember(i, "id", v)}
-                                />
-                            </View>
+                                        onFocus={() => setFocusedInput("id" + i)}
+                                        onBlur={() => setFocusedInput(null)}
+                                    />
+                                </View>
                         </View>
                     ))}
 
@@ -249,17 +256,18 @@ export default function AddMembers() {
                         </TouchableOpacity>
                     </View>
                 </ScrollView>
+                </KeyboardAvoidingView>
             </SafeAreaView>
         );
     }
 
-    // ── Render: Step 3 – Review & Book ─────────
+    // -- Render: Step 3 � Review & Book ---------
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+            <StatusBar barStyle="dark-content" backgroundColor="#ff6600" />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => setStep(2)} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Confirm & Book</Text>
                 <View style={{ width: 40 }} />
@@ -268,7 +276,7 @@ export default function AddMembers() {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {/* Summary Card */}
                 <View style={styles.summaryCard}>
-                    <Ionicons name="shield-checkmark" size={40} color="#0c831f" style={{ alignSelf: "center", marginBottom: 12 }} />
+                    <Ionicons name="shield-checkmark" size={40} color="#ff6600" style={{ alignSelf: "center", marginBottom: 12 }} />
                     <Text style={styles.summaryTitle}>Booking Summary</Text>
 
                     <View style={styles.summaryRow}>
@@ -287,9 +295,9 @@ export default function AddMembers() {
                         <Text style={styles.summaryValue}>{memberCount}</Text>
                     </View>
                     <View style={styles.summaryRow}>
-                        <Ionicons name="people" size={16} color="#0c831f" />
-                        <Text style={[styles.summaryLabel, { color: "#0c831f" }]}>Total Persons (inc. Customer):</Text>
-                        <Text style={[styles.summaryValue, { color: "#0c831f", fontWeight: "900" }]}>{memberCount ? memberCount + 1 : 1}</Text>
+                        <Ionicons name="people" size={16} color="#ff6600" />
+                        <Text style={[styles.summaryLabel, { color: "#ff6600" }]}>Total Persons (inc. Customer):</Text>
+                        <Text style={[styles.summaryValue, { color: "#ff6600", fontWeight: "900" }]}>{memberCount ? memberCount + 1 : 1}</Text>
                     </View>
                 </View>
 
@@ -300,15 +308,15 @@ export default function AddMembers() {
                             <Text style={styles.memberBadgeText}>{i + 1}</Text>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.reviewMemberName}>{m.name || "—"}</Text>
-                            <Text style={styles.reviewMemberId}>ID: {m.id || "—"}</Text>
+                            <Text style={styles.reviewMemberName}>{m.name || "�"}</Text>
+                            <Text style={styles.reviewMemberId}>ID: {m.id || "�"}</Text>
                         </View>
                     </View>
                 ))}
 
                 {/* Confirm Message */}
                 <View style={styles.confirmNote}>
-                    <Ionicons name="information-circle-outline" size={18} color="#023e8a" />
+                    <Ionicons name="information-circle-outline" size={18} color="#ff6600" />
                     <Text style={styles.confirmNoteText}>
                         Please verify all details before submitting. This will create a room booking entry.
                     </Text>
@@ -337,7 +345,7 @@ export default function AddMembers() {
     );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// --- Styles -------------------------------------------------------------------
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#f8f9fa" },
     header: {
@@ -347,13 +355,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: Platform.OS === "android" ? 40 : 10,
         paddingBottom: 20,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
     },
     backButton: { padding: 8 },
-    headerTitle: { fontSize: 18, fontWeight: "900", color: "#000" },
+    headerTitle: { fontSize: 18, fontWeight: "900", color: "#fff" },
     scrollContent: { padding: 20, paddingBottom: 40 },
 
-    // Step 1 – icon section
+    // Step 1 � icon section
     iconCenter: { alignItems: "center", marginBottom: 28 },
     bigIconBox: {
         width: 96,
@@ -398,13 +406,10 @@ const styles = StyleSheet.create({
         borderColor: "transparent",
     },
     numberBubbleActive: {
-        backgroundColor: "#023e8a",
-        borderColor: "#0056b3",
-        shadowColor: "#023e8a",
-        elevation: 6,
+        backgroundColor: "#fff0e6", borderColor: "#ff6600", shadowColor: "#ff6600", elevation: 6,
     },
     numberBubbleText: { fontSize: 16, fontWeight: "800", color: "#555" },
-    numberBubbleTextActive: { color: "#fff" },
+    numberBubbleTextActive: { color: "#ff6600" },
 
     // Member card (step 2)
     memberCard: {
@@ -423,7 +428,7 @@ const styles = StyleSheet.create({
         width: 34,
         height: 34,
         borderRadius: 17,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
         justifyContent: "center",
         alignItems: "center",
     },
@@ -463,7 +468,7 @@ const styles = StyleSheet.create({
         flex: 2,
         height: 52,
         borderRadius: 14,
-        backgroundColor: "#023e8a",
+        backgroundColor: "#ff6600",
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
@@ -473,7 +478,7 @@ const styles = StyleSheet.create({
     nextBtnDisabled: { backgroundColor: "#aab4c8" },
     nextBtnText: { fontSize: 15, fontWeight: "900", color: "#fff" },
 
-    // Step 3 – Summary
+    // Step 3 � Summary
     summaryCard: {
         backgroundColor: "#fff",
         borderRadius: 24,
@@ -488,7 +493,7 @@ const styles = StyleSheet.create({
     summaryTitle: {
         fontSize: 18,
         fontWeight: "900",
-        color: "#0c831f",
+        color: "#ff6600",
         textAlign: "center",
         marginBottom: 16,
     },
@@ -514,21 +519,21 @@ const styles = StyleSheet.create({
     confirmNote: {
         flexDirection: "row",
         alignItems: "flex-start",
-        backgroundColor: "#e8f0fe",
+        backgroundColor: "#fff0e6",
         borderRadius: 12,
         padding: 14,
         gap: 10,
         marginBottom: 20,
         marginTop: 8,
     },
-    confirmNoteText: { flex: 1, fontSize: 13, color: "#023e8a", fontWeight: "600", lineHeight: 18 },
+    confirmNoteText: { flex: 1, fontSize: 13, color: "#ff6600", fontWeight: "600", lineHeight: 18 },
 
     // Book button
     bookBtn: {
         flex: 2,
         height: 56,
         borderRadius: 16,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
@@ -551,4 +556,13 @@ const styles = StyleSheet.create({
     },
     toastText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });
+
+
+
+
+
+
+
+
+
 

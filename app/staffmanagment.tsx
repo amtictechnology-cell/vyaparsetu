@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { BASE_URL } from '../constants/Config';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -109,6 +110,18 @@ export default function StaffManagement() {
     const [profileImage, setProfileImage] = useState<string | null>(null);
     const [idProofImage, setIdProofImage] = useState<string | null>(null);
 
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [dateObj, setDateObj] = useState(new Date());
+
+    const onDateChange = (event: any, selectedDate?: Date) => {
+        setShowDatePicker(Platform.OS === 'ios');
+        if (selectedDate) {
+            setDateObj(selectedDate);
+            const formatted = `${String(selectedDate.getDate()).padStart(2, '0')}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${selectedDate.getFullYear()}`;
+            setDob(formatted);
+        }
+    };
+
     const [attendanceRecords, setAttendanceRecords] = useState<Record<string, string>>({});
     const [attendanceModalVisible, setAttendanceModalVisible] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
@@ -144,23 +157,23 @@ export default function StaffManagement() {
     const fetchTodayAttendance = async () => {
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch(`${BASE_URL}/staff/get-attendance`, {
+            const response = await fetch(`${BASE_URL}/staff/attendance/get`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
                 }
             });
             const data = await response.json();
-            if (response.ok && data && (data.success || data.attendance || data.message)) {
-                const attendanceArray = Array.isArray(data.attendance) ? data.attendance : [];
+            if (response.ok && data && (data.success || data.data || data.message)) {
+                const attendanceArray = Array.isArray(data.data) ? data.data : [];
                 const records: Record<string, string> = {};
                 attendanceArray.forEach((att: any) => {
                     const staffIdField = att.staffId;
                     if (staffIdField && typeof staffIdField === 'object') {
-                        if (staffIdField._id) records[staffIdField._id] = att.attendance;
-                        if (staffIdField.staffId) records[staffIdField.staffId] = att.attendance;
+                        if (staffIdField._id) records[staffIdField._id] = att.status;
+                        if (staffIdField.staffId) records[staffIdField.staffId] = att.status;
                     } else if (typeof staffIdField === 'string') {
-                        records[staffIdField] = att.attendance;
+                        records[staffIdField] = att.status;
                     }
                 });
 
@@ -192,8 +205,8 @@ export default function StaffManagement() {
                 }
             });
             const data = await response.json();
-            if (response.ok && data && Array.isArray(data.staffList)) {
-                const formattedStaff = data.staffList.map((s: any) => ({
+            if (response.ok && data && Array.isArray(data.data)) {
+                const formattedStaff = data.data.map((s: any) => ({
                     id: s._id || s.id || Math.random().toString(),
                     staffId: s.staffId || s._id || s.id || "",
                     firstName: s.firstName || "",
@@ -283,43 +296,20 @@ export default function StaffManagement() {
         setIsSubmitting(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const formData = new FormData();
-            formData.append("firstName", firstName);
-            formData.append("lastName", lastName);
-            formData.append("mobile", mobile);
-            formData.append("adharNumber", adharNumber);
-            formData.append("salary", salary);
-            formData.append("role", role);
-            formData.append("DOB", dob);
-            formData.append("address[city]", city);
-            if (email) formData.append("email", email);
-
-            if (profileImage) {
-                const uriParts = profileImage.split('.');
-                const fileType = uriParts[uriParts.length - 1];
-                formData.append("profileImage", {
-                    uri: profileImage,
-                    name: `profile.${fileType}`,
-                    type: `image/${fileType}`,
-                } as any);
-            }
-
-            if (idProofImage) {
-                const uriParts = idProofImage.split('.');
-                const fileType = uriParts[uriParts.length - 1];
-                formData.append("IdProofImage", {
-                    uri: idProofImage,
-                    name: `idProof.${fileType}`,
-                    type: `image/${fileType}`,
-                } as any);
-            }
+            const payload = {
+                name: `${firstName} ${lastName}`.trim(),
+                mobile: mobile,
+                address: city,
+                salary: Number(salary)
+            };
 
             const response = await fetch(`${BASE_URL}/staff/add`, {
                 method: "POST",
                 headers: {
+                    "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`,
                 },
-                body: formData
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
@@ -368,11 +358,11 @@ export default function StaffManagement() {
             const token = await AsyncStorage.getItem("userToken");
             const isEditing = !!attendanceRecords[selectedStaff.staffId];
             const url = isEditing
-                ? `${BASE_URL}/staff/edit-attendance`
-                : `${BASE_URL}/staff/mark-attendance`;
+                ? `${BASE_URL}/staff/attendance/edit`
+                : `${BASE_URL}/staff/attendance/mark`;
 
             const response = await fetch(url, {
-                method: "POST",
+                method: isEditing ? "PATCH" : "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
@@ -477,7 +467,7 @@ export default function StaffManagement() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+            <StatusBar barStyle="dark-content" backgroundColor="#ff6600" />
 
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -621,7 +611,21 @@ export default function StaffManagement() {
                                     ))}
                                 </ScrollView>
 
-                                <FloatingLabelInput label="Date of Birth (YYYY-MM-DD)" value={dob} onChangeText={setDob} placeholder="1995-10-15" />
+                                <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+                                    <View pointerEvents="none">
+                                        <FloatingLabelInput label="Date of Birth (DD-MM-YYYY)" value={dob} placeholder="15-10-1995" editable={false} />
+                                    </View>
+                                </TouchableOpacity>
+                                {showDatePicker && (
+                                    <DateTimePicker
+                                        value={dateObj}
+                                        mode="date"
+                                        display="default"
+                                        onChange={onDateChange}
+                                        maximumDate={new Date()}
+                                    />
+                                )}
+
                                 <FloatingLabelInput label="City" value={city} onChangeText={setCity} />
                                 <FloatingLabelInput label="Email (Optional)" value={email} onChangeText={setEmail} keyboardType="email-address" />
 
@@ -669,11 +673,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 60,
         paddingBottom: 20,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
     },
     backButton: { padding: 8 },
     headerTitle: { fontSize: 20, fontWeight: "900", color: "#000" },
-    searchContainer: { padding: 16, backgroundColor: "#ffb703", borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+    searchContainer: { padding: 16, backgroundColor: "#ff6600", borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
     searchBar: {
         flexDirection: "row",
         alignItems: "center",

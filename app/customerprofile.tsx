@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { BASE_URL } from "../constants/Config";
 
-// ── Single booking entry type ─────────────────────────────────────────────────
+// -- Single booking entry type -------------------------------------------------
 type BookingEntry = {
     _id: string;
     bookingId: string;
@@ -82,7 +82,7 @@ export default function CustomerProfile() {
     // Single booking confirm modal
     const [showSingleModal, setShowSingleModal] = useState(false);
 
-    // Members detail modal — which booking index is expanded
+    // Members detail modal ? which booking index is expanded
     const [memberDetailIdx, setMemberDetailIdx] = useState<number | null>(null);
 
     // Booking delete confirmation
@@ -202,21 +202,21 @@ export default function CustomerProfile() {
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-            {/* ── Single Booking Confirm Modal ───────────────── */}
+            {/* -- Single Booking Confirm Modal ----------------- */}
             <Modal visible={showSingleModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalBox}>
                         <View style={styles.modalIconBox}>
-                            <Ionicons name="bed" size={36} color="#0c831f" />
+                            <Ionicons name="bed" size={36} color="#ff6600" />
                         </View>
                         <Text style={styles.modalTitle}>Confirm Booking?</Text>
                         <Text style={styles.modalSub}>
-                            Room <Text style={{ fontWeight: "900", color: "#023e8a" }}>{roomNumber}</Text> will be
+                            Room <Text style={{ fontWeight: "900", color: "#0059ff" }}>{roomNumber}</Text> will be
                             booked for{"\n"}
                             <Text style={{ fontWeight: "900", color: "#1a1a2e" }}>{customer.name}</Text>
                         </Text>
                         <Text style={styles.modalDateTime}>
-                            📅 {new Date().toLocaleString("en-IN")}
+                            {new Date().toLocaleString("en-IN")}
                         </Text>
                         <View style={styles.modalBtnRow}>
                             <TouchableOpacity
@@ -237,7 +237,7 @@ export default function CustomerProfile() {
                 </View>
             </Modal>
 
-            {/* ── Members Detail Modal ───────────────────────── */}
+            {/* -- Members Detail Modal ------------------------- */}
             <Modal
                 visible={memberDetailIdx !== null}
                 transparent
@@ -245,27 +245,29 @@ export default function CustomerProfile() {
                 onRequestClose={() => setMemberDetailIdx(null)}
             >
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalBox, { width: "92%" }]}>
+                    <View style={[styles.modalBox, { width: "92%", maxHeight: "75%", marginBottom: 30 }]}>
                         <View style={styles.modalDetailHeader}>
                             <Text style={styles.modalDetailTitle}>
-                                👥 Member Details
+                                Member Details
                             </Text>
                             <TouchableOpacity onPress={() => setMemberDetailIdx(null)}>
-                                <Ionicons name="close-circle" size={28} color="#ccc" />
+                                <Ionicons name="close-circle" size={28} color="#ff6600" />
                             </TouchableOpacity>
                         </View>
-                        {memberDetailIdx !== null &&
-                            allEntries[memberDetailIdx]?.members?.map((m: any, mi: number) => (
-                                <View key={mi} style={styles.detailMemberRow}>
-                                    <View style={styles.detailMemberDot}>
-                                        <Text style={styles.detailMemberDotText}>{mi + 1}</Text>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {memberDetailIdx !== null &&
+                                allEntries[memberDetailIdx]?.members?.map((m: any, mi: number) => (
+                                    <View key={mi} style={styles.detailMemberRow}>
+                                        <View style={styles.detailMemberDot}>
+                                            <Text style={[styles.detailMemberDotText, {color: "#fff"}]}>{mi + 1}</Text>
+                                        </View>
+                                        <View>
+                                            <Text style={styles.detailMemberName}>{m.name}</Text>
+                                            <Text style={styles.detailMemberId}>ID: {m.idNumber}</Text>
+                                        </View>
                                     </View>
-                                    <View>
-                                        <Text style={styles.detailMemberName}>{m.name}</Text>
-                                        <Text style={styles.detailMemberId}>ID: {m.idNumber}</Text>
-                                    </View>
-                                </View>
-                            ))}
+                                ))}
+                        </ScrollView>
                     </View>
                 </View>
             </Modal>
@@ -273,7 +275,7 @@ export default function CustomerProfile() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Customer Profile</Text>
                 <View style={{ width: 40 }} />
@@ -292,20 +294,20 @@ export default function CustomerProfile() {
                                     <Ionicons name="person" size={36} color="#666" />
                                 )}
                             </View>
-                            <View style={styles.roomBadge}>
-                                <Text style={styles.roomBadgeText}>Room {roomNumber}</Text>
-                            </View>
+                            {/* Removed roomBadge below icon as requested */}
                         </View>
 
                         <View style={styles.profileNameBlock}>
                             <Text style={styles.customerName}>{customer.name}</Text>
-                            <View style={styles.mobileRow}>
-                                <Ionicons name="call" size={14} color="#0c831f" />
-                                <Text style={styles.mobileTxt}>{customer.mobile}</Text>
-                            </View>
-                            <View style={styles.idRow}>
-                                <Ionicons name="card" size={14} color="#ffb703" />
-                                <Text style={styles.idTxt}>{customer.idNumber}</Text>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                                <View style={styles.mobileRow}>
+                                    <Ionicons name="call" size={14} color="#ff6600" />
+                                    <Text style={styles.mobileTxt}>{customer.mobile}</Text>
+                                </View>
+                                <View style={styles.idRow}>
+                                    <Ionicons name="card" size={14} color="#ff6600" />
+                                    <Text style={styles.idTxt}>{customer.idNumber}</Text>
+                                </View>
                             </View>
                         </View>
                     </View>
@@ -316,7 +318,7 @@ export default function CustomerProfile() {
                             {isExpanded ? "Show Less" : "View Full Details"}
                         </Text>
                         <Animated.View style={{ transform: [{ rotate: rotateAnimation }] }}>
-                            <Ionicons name="chevron-down" size={20} color="#666" />
+                            <Ionicons name="chevron-down" size={20} color="#ff6600" />
                         </Animated.View>
                     </TouchableOpacity>
 
@@ -351,8 +353,8 @@ export default function CustomerProfile() {
                         activeOpacity={0.85}
                     >
                         <View style={styles.cardRow}>
-                            <View style={[styles.cardIconBox, { backgroundColor: "#dbeafe" }]}>
-                                <Ionicons name="people" size={22} color="#023e8a" />
+                            <View style={[styles.cardIconBox, { backgroundColor: "#e6f0ff" }]}>
+                                <Ionicons name="people" size={22} color="#0059ff" />
                             </View>
                             <Text style={styles.cardTitle}>Add Members & Room Allot</Text>
                         </View>
@@ -366,8 +368,8 @@ export default function CustomerProfile() {
                         activeOpacity={0.85}
                     >
                         <View style={styles.cardRow}>
-                            <View style={[styles.cardIconBox, { backgroundColor: "#dcfce7" }]}>
-                                <Ionicons name="person" size={22} color="#0c831f" />
+                            <View style={[styles.cardIconBox, { backgroundColor: "#fff0e6" }]}>
+                                <Ionicons name="person" size={22} color="#ff6600" />
                             </View>
                             <Text style={styles.cardTitle}>Single Booking</Text>
                         </View>
@@ -375,10 +377,10 @@ export default function CustomerProfile() {
                     </TouchableOpacity>
                 </View>
 
-                {/* ── Booking Entries ── */}
+                {/* -- Booking Entries -- */}
                 {allEntries.length > 0 && (
                     <View style={styles.bookingSection}>
-                        <Text style={styles.bookingSectionTitle}>🏨 Room Booking Entries</Text>
+                        <Text style={styles.bookingSectionTitle}>Room Booking Entries</Text>
 
                         {allEntries.map((b, idx) => {
                             const isMember = b.numberOfMembers > 1;
@@ -407,8 +409,8 @@ export default function CustomerProfile() {
                                             </View>
                                             {(b.status === "checked-out" || b.checkedOutAt) && (
                                                 <View style={[styles.metaRow, { marginTop: 2 }]}>
-                                                    <Ionicons name="time-outline" size={12} color="#4caf50" />
-                                                    <Text style={[styles.bookingCardMeta, { color: "#4caf50" }]}>
+                                                    <Ionicons name="time-outline" size={12} color="#ff6600" />
+                                                    <Text style={[styles.bookingCardMeta, { color: "#ff6600" }]}>
                                                         Checked Out: {b.checkedOutAt}
                                                     </Text>
                                                 </View>
@@ -417,11 +419,11 @@ export default function CustomerProfile() {
                                         {/* Type badge */}
                                         <View style={[
                                             styles.typeBadge,
-                                            { backgroundColor: isMember ? "#dbeafe" : "#dcfce7", marginRight: 8 },
+                                            { backgroundColor: isMember ? "#e6f0ff" : "#fff0e6", marginRight: 8 },
                                         ]}>
                                             <Text style={[
                                                 styles.typeBadgeText,
-                                                { color: isMember ? "#023e8a" : "#0c831f" },
+                                                { color: isMember ? "#0059ff" : "#ff6600" },
                                             ]}>
                                                 {isMember ? "Group" : "Single"}
                                             </Text>
@@ -433,13 +435,13 @@ export default function CustomerProfile() {
                                             }}
                                             style={styles.deleteIconBtn}
                                         >
-                                            <Ionicons name="trash-outline" size={18} color="#d32f2f" />
+                                            <Ionicons name="trash-outline" size={18} color="#ff6600" />
                                         </TouchableOpacity>
                                     </View>
 
                                     {/* Footer Section with Persons Pill and Checkout */}
                                     <View style={styles.bookingCardFooter}>
-                                        {/* Total Persons — highlighted pill, tappable if members exist */}
+                                        {/* Total Persons ? highlighted pill, tappable if members exist */}
                                         <TouchableOpacity
                                             style={styles.personsPill}
                                             onPress={() => isMember && totalPersons > 0
@@ -447,19 +449,19 @@ export default function CustomerProfile() {
                                                 : null}
                                             activeOpacity={isMember ? 0.7 : 1}
                                         >
-                                            <Ionicons name="people" size={16} color="#023e8a" />
+                                            <Ionicons name="people" size={16} color="#0059ff" />
                                             <Text style={styles.personsPillText}>
                                                 Total Persons:{" "}
                                                 <Text style={styles.personsPillCount}>{totalPersons}</Text>
                                             </Text>
                                             {isMember && (
-                                                <Ionicons name="chevron-forward" size={14} color="#023e8a" />
+                                                <Ionicons name="chevron-forward" size={14} color="#0059ff" />
                                             )}
                                         </TouchableOpacity>
 
                                         {b.status === "checked-out" || b.checkedOutAt ? (
                                             <View style={styles.checkoutBadge}>
-                                                <Ionicons name="checkmark-done-circle" size={16} color="#4caf50" />
+                                                <Ionicons name="checkmark-done-circle" size={16} color="#ff6600" />
                                                 <Text style={styles.checkoutBadgeText}>Checked Out</Text>
                                             </View>
                                         ) : (
@@ -489,7 +491,7 @@ export default function CustomerProfile() {
                 >
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalBox}>
-                            <Ionicons name="alert-circle" size={48} color="#d32f2f" style={{ alignSelf: 'center', marginBottom: 12 }} />
+                            <Ionicons name="alert-circle" size={48} color="#ff6600" style={{ alignSelf: 'center', marginBottom: 12 }} />
                             <Text style={styles.modalTitle}>Delete Booking?</Text>
                             <Text style={styles.modalSub}>Are you sure you want to remove this booking entry?</Text>
                             <View style={styles.modalBtnRow}>
@@ -500,7 +502,7 @@ export default function CustomerProfile() {
                                     <Text style={styles.modalCancelText}>Cancel</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                    style={[styles.modalConfirmBtn, { backgroundColor: '#d32f2f' }]}
+                                    style={[styles.modalConfirmBtn, { backgroundColor: '#ff6600' }]}
                                     onPress={handleDeleteBooking}
                                 >
                                     <Text style={styles.modalConfirmText}>Delete</Text>
@@ -519,7 +521,7 @@ export default function CustomerProfile() {
                 >
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalBox}>
-                            <Ionicons name="log-out" size={48} color="#d32f2f" style={{ alignSelf: 'center', marginBottom: 12 }} />
+                            <Ionicons name="log-out" size={48} color="#ff6600" style={{ alignSelf: 'center', marginBottom: 12 }} />
                             <Text style={styles.modalTitle}>Confirm Checkout?</Text>
                             <Text style={styles.modalSub}>Are you sure you want to checkout this room booking?</Text>
                             <View style={styles.modalBtnRow}>
@@ -531,7 +533,7 @@ export default function CustomerProfile() {
                                     <Text style={styles.modalCancelText}>Cancel</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                    style={[styles.modalConfirmBtn, { backgroundColor: '#d32f2f' }]}
+                                    style={[styles.modalConfirmBtn, { backgroundColor: '#ff6600' }]}
                                     onPress={handleCheckoutBooking}
                                     disabled={checkoutLoading}
                                 >
@@ -569,16 +571,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: Platform.OS === "android" ? 40 : 10,
         paddingBottom: 20,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
     },
     backButton: { padding: 8 },
-    headerTitle: { fontSize: 20, fontWeight: "900", color: "#000" },
+    headerTitle: { fontSize: 20, fontWeight: "900", color: "#fff" },
     scrollContent: { paddingBottom: 16 },
 
     // Profile Card
     profileCard: {
         backgroundColor: "#fff",
-        borderRadius: 0,
+        borderRadius: 16,
         padding: 16,
         elevation: 4,
         shadowColor: "#000",
@@ -602,12 +604,12 @@ const styles = StyleSheet.create({
         alignItems: "center",
         overflow: "hidden",
         borderWidth: 2.5,
-        borderColor: "#ffb703",
+        borderColor: "#ff6600",
     },
     avatarImg: { width: "100%", height: "100%" },
     roomBadge: {
         marginTop: 5,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 10,
@@ -643,30 +645,19 @@ const styles = StyleSheet.create({
     detailValue: { fontSize: 14, fontWeight: "600", color: "#333" },
 
     // Action cards
-    actionSection: { marginTop: 20, flexDirection: "row", gap: 12 },
-    actionCard: {
-        flex: 1,
-        backgroundColor: "#fff",
-        borderRadius: 20,
-        paddingVertical: 16,
-        paddingHorizontal: 12,
-        elevation: 3,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
-    },
-    cardRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
-    cardIconBox: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-    cardTitle: { flex: 1, fontSize: 13, fontWeight: "900", color: "#1a1a2e", lineHeight: 18 },
-    cardSub: { fontSize: 11, fontWeight: "500", color: "#888", lineHeight: 16 },
+    actionSection: { marginTop: 20, flexDirection: "row", gap: 12, paddingHorizontal: 16 },
+    actionCard: { flex: 1, backgroundColor: "#fff", borderRadius: 16, paddingVertical: 12, paddingHorizontal: 12, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, borderWidth: 1, borderColor: "#f0f0f0" },
+    cardRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
+    cardIconBox: { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+    cardTitle: { flex: 1, fontSize: 12, fontWeight: "800", color: "#1a1a2e", lineHeight: 16 },
+    cardSub: { fontSize: 10, fontWeight: "500", color: "#888", lineHeight: 14 },
 
     // Booking entries
     bookingSection: { marginTop: 24 },
     bookingSectionTitle: { fontSize: 18, fontWeight: "900", color: "#1a1a2e", marginBottom: 12, paddingHorizontal: 16 },
     bookingCard: {
         backgroundColor: "#fff",
-        borderRadius: 0,
+        borderRadius: 16,
         padding: 16,
         marginBottom: 2,
         elevation: 1,
@@ -678,7 +669,7 @@ const styles = StyleSheet.create({
     bookingCardHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
     bookingBadge: {
         width: 38, height: 38, borderRadius: 19,
-        backgroundColor: "#023e8a",
+        backgroundColor: "#ff6600",
         justifyContent: "center", alignItems: "center",
     },
     bookingCardTitle: { fontSize: 15, fontWeight: "900", color: "#222" },
@@ -701,8 +692,8 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         alignSelf: "flex-start",
     },
-    personsPillText: { fontSize: 13, fontWeight: "700", color: "#023e8a" },
-    personsPillCount: { fontSize: 15, fontWeight: "900", color: "#023e8a" },
+    personsPillText: { fontSize: 13, fontWeight: "700", color: "#0059ff" },
+    personsPillCount: { fontSize: 15, fontWeight: "900", color: "#0059ff" },
     bookingCardFooter: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -713,7 +704,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
-        backgroundColor: "#d32f2f",
+        backgroundColor: "#ff6600",
         borderRadius: 14,
         paddingHorizontal: 16,
         paddingVertical: 10,
@@ -740,10 +731,10 @@ const styles = StyleSheet.create({
     checkoutBadgeText: {
         fontSize: 13,
         fontWeight: "900",
-        color: "#4caf50",
+        color: "#ff6600",
     },
 
-    // ── Modals ───────────────────────────────────────────────
+    // -- Modals -----------------------------------------------
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.45)",
@@ -753,7 +744,7 @@ const styles = StyleSheet.create({
     modalBox: {
         width: "100%",
         backgroundColor: "#fff",
-        borderRadius: 0,
+        borderRadius: 16,
         padding: 20,
         elevation: 10,
         shadowColor: "#000",
@@ -763,7 +754,7 @@ const styles = StyleSheet.create({
     },
     modalIconBox: {
         width: 68, height: 68, borderRadius: 34,
-        backgroundColor: "#dcfce7",
+        backgroundColor: "#fff0e6",
         justifyContent: "center", alignItems: "center",
         alignSelf: "center", marginBottom: 16,
     },
@@ -789,7 +780,7 @@ const styles = StyleSheet.create({
     modalCancelText: { fontSize: 15, fontWeight: "800", color: "#777" },
     modalConfirmBtn: {
         flex: 2, height: 50, borderRadius: 14,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         flexDirection: "row",
         justifyContent: "center", alignItems: "center", gap: 8,
         elevation: 4,
@@ -809,7 +800,7 @@ const styles = StyleSheet.create({
     },
     detailMemberDot: {
         width: 32, height: 32, borderRadius: 16,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
         justifyContent: "center", alignItems: "center",
     },
     detailMemberDotText: { fontSize: 14, fontWeight: "900", color: "#000" },
@@ -835,3 +826,16 @@ const styles = StyleSheet.create({
     },
     toastText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });
+
+
+
+
+
+
+
+
+
+
+
+
+

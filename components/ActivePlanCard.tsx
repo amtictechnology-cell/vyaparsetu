@@ -84,7 +84,7 @@ export default function ActivePlanCard({ plan, activatedAtString }: ActivePlanCa
 
       {/* Plan Status Row */}
       <View style={styles.featuresRow}>
-        <Ionicons name="shield-checkmark" size={18} color="#0c831f" style={{ marginRight: 6 }} />
+        <Ionicons name="shield-checkmark" size={18} color="#ff6600" style={{ marginRight: 6 }} />
         <Text style={styles.statusText}>Secure Commercial Business License</Text>
       </View>
     </View>
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 16,
     borderWidth: 1.5,
-    borderColor: "#e8f5e9",
+    borderColor: "#fff0e6",
     elevation: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -129,8 +129,8 @@ const styles = StyleSheet.create({
   badge: {
     fontSize: 9,
     fontWeight: "900",
-    color: "#0c831f",
-    backgroundColor: "#e8f5e9",
+    color: "#ff6600",
+    backgroundColor: "#fff0e6",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 22,
     fontWeight: "900",
-    color: "#0c831f",
+    color: "#ff6600",
   },
   durationText: {
     fontSize: 11,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   daysText: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#0c831f",
+    color: "#ff6600",
   },
   progressBarTrack: {
     height: 8,
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: "100%",
-    backgroundColor: "#0c831f",
+    backgroundColor: "#ff6600",
     borderRadius: 4,
   },
   progressScaleRow: {

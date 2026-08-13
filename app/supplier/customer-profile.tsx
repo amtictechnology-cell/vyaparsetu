@@ -1,16 +1,11 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    Animated,
-    FlatList,
     KeyboardAvoidingView,
-    Linking,
-    Modal,
     Platform,
     ScrollView,
     StyleSheet,
@@ -18,1076 +13,687 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Modal
 } from 'react-native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { BASE_URL } from '../../constants/Config';
 
-// ---------- Types ----------
-interface BillItem {
-    id: string;
-    itemName: string;
-    itemPrice: number | string;
-    quantity: number | string;
-}
+interface CustomerDetail { _id: string; shopName: string; ownerName: string; srNumber: string; mobileNumber: string; status: string; }
+interface RateItem { _id: string; itemName: string; itemPrice: number; }
+interface CartItem { item: RateItem; quantity: number; }
 
-interface RateItem {
-    itemName: string;
-    itemPrice: number;
-}
-
-interface Bill {
-    _id?: string;
-    billNumber: string;
-    grandTotal: number;
-    paymentStatus: 'pending' | 'done';
-    createdAt: string;
-    items?: any[];
-}
-
-// ---------- Component ----------
-export default function SupplierCustomerProfile() {
+export default function CustomerProfile() {
     const router = useRouter();
-    const { customerId } = useLocalSearchParams();
-    const [customer, setCustomer] = useState<any>(null);
+    const params = useLocalSearchParams();
+    const customerId = (params.customerId || params.id) as string;
+
+    const [custDetail, setCustDetail] = useState<CustomerDetail | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Bill state
-    const [billItems, setBillItems] = useState<BillItem[]>([
-        { id: Date.now().toString(), itemName: '', itemPrice: '', quantity: '' },
-    ]);
+    // Bill creation states
+    const [addBillModalVisible, setAddBillModalVisible] = useState(false);
+    const [cartMode, setCartMode] = useState(false); // false = select items, true = view cart
+    const [rateList, setRateList] = useState<RateItem[]>([]);
+    const [rateLoading, setRateLoading] = useState(false);
+    const [cart, setCart] = useState<CartItem[]>([]);
+    
+    // Payment & Notes
+    const [paymentStatus, setPaymentStatus] = useState<'pending' | 'done'>('pending');
     const [notes, setNotes] = useState('');
-    const [paymentStatus, setPaymentStatus] = useState<'pending' | 'done'>('done');
     const [creatingBill, setCreatingBill] = useState(false);
 
     // Bill history
-    const [bills, setBills] = useState<Bill[]>([]);
+    const [bills, setBills] = useState<any[]>([]);
     const [billsLoading, setBillsLoading] = useState(false);
-    const [historyExpanded, setHistoryExpanded] = useState(false);
-
-    // Item picker modal
-    const [pickerVisible, setPickerVisible] = useState(false);
-    const [pickerRowId, setPickerRowId] = useState<string | null>(null);
-    const [searchText, setSearchText] = useState('');
-    const [rateList, setRateList] = useState<RateItem[]>([]);
-    const [rateLoading, setRateLoading] = useState(false);
-
-    // Success animation
-    const successOpacity = useRef(new Animated.Value(0)).current;
+    
+    // Payments
+    const [payments, setPayments] = useState<any[]>([]);
+    const [paymentsLoading, setPaymentsLoading] = useState(false);
+    
+    // Payment Modal
+    const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [paymentNotes, setPaymentNotes] = useState('');
+    const [paymentMode, setPaymentMode] = useState<'cash' | 'online'>('cash');
+    const [paymentDate, setPaymentDate] = useState(new Date());
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [creatingPayment, setCreatingPayment] = useState(false);
+    // Toast
+    const [showToast, setShowToast] = useState(false);
 
     const getToken = async () => AsyncStorage.getItem('userToken');
 
-    // ---------- Load cached customer & bills ----------
-    const loadCachedProfileData = async () => {
-        if (!customerId) return;
+    const fetchCustomerDetail = useCallback(async () => {
         try {
-            const cachedCust = await AsyncStorage.getItem(`supplier_customer_${customerId}`);
-            if (cachedCust) {
-                setCustomer(JSON.parse(cachedCust));
-                setLoading(false);
-            }
-            const cachedBills = await AsyncStorage.getItem(`supplier_customer_bills_${customerId}`);
-            if (cachedBills) {
-                setBills(JSON.parse(cachedBills));
-                setBillsLoading(false);
-            }
-        } catch (e) {
-            console.error('Failed to load cached profile data:', e);
-        }
-    };
-
-    // ---------- Fetch customer ----------
-    const fetchCustomerDetail = async () => {
-        if (!customerId) return;
-        try {
+            setLoading(true);
             const token = await getToken();
-            const res = await fetch(`${BASE_URL}/supplier/customer?customerId=${customerId}`, {
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
+            const res = await fetch(`${BASE_URL}/supplier/customer?customerId=${customerId}`, { headers: { Authorization: `Bearer ${token}` } });
             const data = await res.json();
             if (res.ok && data.success) {
-                const found = Array.isArray(data.data)
-                    ? data.data.find((c: any) => c._id === customerId)
-                    : data.data;
-                setCustomer(found);
-                await AsyncStorage.setItem(`supplier_customer_${customerId}`, JSON.stringify(found));
+                const found = Array.isArray(data.data) ? data.data.find((c: any) => c._id === customerId) : data.data;
+                setCustDetail(found);
             }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // ---------- Fetch bill history ----------
-    const fetchBills = async () => {
-        if (!customerId) return;
-        if (bills.length === 0) setBillsLoading(true);
-        try {
-            const token = await getToken();
-            const res = await fetch(`${BASE_URL}/supplier/bill?customerId=${customerId}`, {
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                setBills(data.data || []);
-                await AsyncStorage.setItem(`supplier_customer_bills_${customerId}`, JSON.stringify(data.data || []));
-            }
-        } catch (e) {
-            console.error('fetchBills error:', e);
-        } finally {
-            setBillsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (!customerId) return;
-        const init = async () => {
-            await loadCachedProfileData();
-            fetchCustomerDetail();
-            fetchBills();
-        };
-        init();
+        } catch { } finally { setLoading(false); }
     }, [customerId]);
 
-    // ---------- Fetch supplier rate list ----------
-    const fetchRateList = async () => {
+    const fetchBills = async () => {
+        try {
+            setBillsLoading(true);
+            const token = await getToken();
+            const res = await fetch(`${BASE_URL}/supplier/customer-bill?customerId=${customerId}`, { headers: { Authorization: `Bearer ${token}` } });
+            const data = await res.json();
+            if (res.ok && data.success) setBills(Array.isArray(data.data) ? data.data : []);
+        } catch { } finally { setBillsLoading(false); }
+    };
+
+    const fetchPayments = async () => {
+        try {
+            setPaymentsLoading(true);
+            const token = await getToken();
+            const res = await fetch(`${BASE_URL}/supplier/customer-payment?customerId=${customerId}`, { headers: { Authorization: `Bearer ${token}` } });
+            const data = await res.json();
+            if (res.ok && data.success) setPayments(Array.isArray(data.data) ? data.data : []);
+        } catch { } finally { setPaymentsLoading(false); }
+    };
+
+    useEffect(() => { if (customerId) { fetchCustomerDetail(); fetchBills(); fetchPayments(); } }, [customerId, fetchCustomerDetail]);
+
+    // Open Modal and Fetch Rate List
+    const handleOpenBillModal = async () => {
+        setCart([]); // reset cart
+        setCartMode(false);
+        setNotes('');
+        setPaymentStatus('pending');
+        setAddBillModalVisible(true);
         setRateLoading(true);
         try {
             const token = await getToken();
-            const res = await fetch(`${BASE_URL}/supplier/rate-list`, {
-                headers: { 'Authorization': `Bearer ${token}` },
+            const res = await fetch(`${BASE_URL}/supplier/rate-list`, { headers: { Authorization: `Bearer ${token}` } });
+            const data = await res.json();
+            if (res.ok) setRateList(data.data?.items || []);
+        } catch (e) { Alert.alert('Error', 'Could not load rate list'); }
+        finally { setRateLoading(false); }
+    };
+
+    const handleAddToCart = (item: RateItem, qtyChange: number) => {
+        setCart(prev => {
+            const existing = prev.find(c => c.item._id === item._id);
+            if (existing) {
+                const newQty = existing.quantity + qtyChange;
+                if (newQty <= 0) return prev.filter(c => c.item._id !== item._id);
+                return prev.map(c => c.item._id === item._id ? { ...c, quantity: newQty } : c);
+            }
+            if (qtyChange > 0) return [...prev, { item, quantity: qtyChange }];
+            return prev;
+        });
+    };
+
+    const getCartQty = (itemId: string) => {
+        return cart.find(c => c.item._id === itemId)?.quantity || 0;
+    };
+
+    const cartTotalAmount = cart.reduce((acc, c) => acc + (c.item.itemPrice * c.quantity), 0);
+    const cartTotalItems = cart.reduce((acc, c) => acc + c.quantity, 0);
+
+    const handleMakePayment = async () => {
+        if (!paymentAmount.trim()) { Alert.alert('Error', 'Amount dalna zaroori hai'); return; }
+        setCreatingPayment(true);
+        try {
+            const token = await getToken();
+            const payload = {
+                customerId,
+                amount: Number(paymentAmount),
+                paymentMode: paymentMode,
+                notes: paymentNotes.trim() || undefined,
+                date: paymentDate.toISOString()
+            };
+            const res = await fetch(`${BASE_URL}/supplier/customer-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             if (res.ok && data.success) {
-                setRateList(data.data?.items || data.data || []);
+                setPaymentModalVisible(false);
+                setPaymentAmount('');
+                setPaymentNotes('');
+                setShowToast(true);
+                setTimeout(() => setShowToast(false), 2500);
+                fetchPayments(); // Refresh payments
+            } else {
+                Alert.alert('Error', data.message || 'Payment fail ho gayi.');
             }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setRateLoading(false);
-        }
+        } catch { Alert.alert('Network Error', 'Server error'); }
+        finally { setCreatingPayment(false); }
     };
 
-    // ---------- Contact actions ----------
-    const handleCall = () => {
-        if (customer?.mobileNumber) Linking.openURL(`tel:${customer.mobileNumber}`);
-    };
-    const handleWhatsApp = () => {
-        if (customer?.mobileNumber) Linking.openURL(`whatsapp://send?phone=91${customer.mobileNumber}`);
-    };
-
-    // ---------- Bill row helpers ----------
-    const addRow = () => {
-        setBillItems(prev => [
-            ...prev,
-            { id: Date.now().toString(), itemName: '', itemPrice: '', quantity: '' },
-        ]);
-    };
-
-    const removeRow = (id: string) => {
-        if (billItems.length === 1) return; // at least one row
-        setBillItems(prev => prev.filter(r => r.id !== id));
-    };
-
-    const updateRow = (id: string, field: keyof BillItem, value: string) => {
-        setBillItems(prev =>
-            prev.map(r => (r.id === id ? { ...r, [field]: value } : r))
-        );
-    };
-
-    const getAmount = (item: BillItem) => {
-        const p = parseFloat(String(item.itemPrice)) || 0;
-        const q = parseFloat(String(item.quantity)) || 0;
-        return p * q;
-    };
-
-    const grandTotal = billItems.reduce((sum, it) => sum + getAmount(it), 0);
-
-    // ---------- Item picker ----------
-    const openPicker = (rowId: string) => {
-        setPickerRowId(rowId);
-        setSearchText('');
-        fetchRateList();
-        setPickerVisible(true);
-    };
-
-    const selectItem = (item: RateItem) => {
-        if (!pickerRowId) return;
-        setBillItems(prev =>
-            prev.map(r =>
-                r.id === pickerRowId
-                    ? { ...r, itemName: item.itemName, itemPrice: item.itemPrice }
-                    : r
-            )
-        );
-        setPickerVisible(false);
-    };
-
-    const confirmManualItem = () => {
-        if (!pickerRowId || !searchText.trim()) return;
-        setBillItems(prev =>
-            prev.map(r =>
-                r.id === pickerRowId ? { ...r, itemName: searchText.trim() } : r
-            )
-        );
-        setPickerVisible(false);
-    };
-
-    const filteredRate = rateList.filter(r =>
-        r.itemName.toLowerCase().includes(searchText.toLowerCase())
-    );
-
-    // ---------- Create Bill ----------
     const handleCreateBill = async () => {
-        const validItems = billItems.filter(
-            it => it.itemName.trim() && Number(it.quantity) > 0
-        );
-        if (validItems.length === 0) {
-            Alert.alert('Error', 'Kam se kam ek item aur quantity daalo.');
-            return;
-        }
-
-        const payload = {
-            customerId,
-            items: validItems.map(it => ({
-                itemName: it.itemName.trim(),
-                itemPrice: parseFloat(String(it.itemPrice)) || 0,
-                quantity: parseFloat(String(it.quantity)),
-            })),
-            paymentStatus,
-            notes: notes.trim() || undefined,
-        };
-
+        if (cart.length === 0) { Alert.alert('Error', 'Cart is empty'); return; }
         setCreatingBill(true);
         try {
             const token = await getToken();
-            const res = await fetch(`${BASE_URL}/supplier/bill`, {
+            const payload = {
+                customerId,
+                items: cart.map(c => ({ itemName: c.item.itemName, itemPrice: c.item.itemPrice, quantity: c.quantity })),
+                paymentStatus,
+                notes: notes.trim() || undefined
+            };
+            const res = await fetch(`${BASE_URL}/supplier/customer-bill`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             if (res.ok && data.success) {
-                showSuccess();
-                // reset
-                setBillItems([{ id: Date.now().toString(), itemName: '', itemPrice: '', quantity: '' }]);
-                setNotes('');
-                setPaymentStatus('done');
-                fetchBills(); // Refresh history
-                Alert.alert(
-                    '✅ Bill Bana Diya!',
-                    `Bill No: ${data.data?.billNumber}\nTotal: ₹${data.data?.grandTotal}`,
-                );
+                setAddBillModalVisible(false);
+                setShowToast(true);
+                setTimeout(() => setShowToast(false), 2500);
+                fetchBills();
             } else {
-                Alert.alert('Error', data.message || 'Bill nahi bana.');
+                Alert.alert('Error', data.message || 'Bill generate nahi hua.');
             }
-        } catch (e) {
-            Alert.alert('Network Error', 'Server se connect nahi ho paya.');
-        } finally {
-            setCreatingBill(false);
-        }
+        } catch { Alert.alert('Network Error', 'Server error'); }
+        finally { setCreatingBill(false); }
     };
 
-    const showSuccess = () => {
-        Animated.sequence([
-            Animated.timing(successOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-            Animated.delay(1500),
-            Animated.timing(successOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
-        ]).start();
-    };
-
-    // ---------- Loading / Not found ----------
     if (loading) {
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#0c831f" />
-            </View>
+            <SafeAreaView style={styles.container} edges={['right', 'bottom', 'left']}>
+                <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? 40 : 50 }]}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}><Ionicons name="arrow-back" size={28} color="#fff" /></TouchableOpacity>
+                    <Text style={styles.headerTitle}>Loading...</Text>
+                    <View style={{ width: 36 }} />
+                </View>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color="#ff6600" /></View>
+            </SafeAreaView>
         );
     }
 
-    if (!customer) {
+    if (!custDetail) {
         return (
-            <View style={styles.center}>
-                <Text>Customer not found</Text>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Text style={{ color: '#0c831f', marginTop: 10 }}>Go Back</Text>
-                </TouchableOpacity>
-            </View>
+            <SafeAreaView style={styles.container} edges={['right', 'bottom', 'left']}>
+                <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? 40 : 50 }]}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}><Ionicons name="arrow-back" size={28} color="#fff" /></TouchableOpacity>
+                    <Text style={styles.headerTitle}>Not Found</Text>
+                    <View style={{ width: 36 }} />
+                </View>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Customer not found.</Text></View>
+            </SafeAreaView>
         );
     }
 
-    // ---------- Render ----------
+    // Calculations
+    const totalBill = bills.reduce((acc, bill) => acc + (bill.grandTotal || 0), 0);
+    const pendingBillTotal = bills.filter(b => b.paymentStatus === 'pending').reduce((acc, bill) => acc + (bill.grandTotal || 0), 0);
+    const totalReceived = payments.reduce((acc, pay) => acc + (pay.amount || 0), 0);
+    const outstanding = pendingBillTotal - totalReceived;
+
+    const mixedFeed = [
+        ...bills.map(b => ({ ...b, feedType: 'bill' })),
+        ...payments.map(p => ({ ...p, feedType: 'payment' }))
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Customer Profile</Text>
-                <View style={{ width: 40 }} />
+        <SafeAreaView style={styles.container} edges={['right', 'bottom', 'left']}>
+            <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? 40 : 50 }]}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}><Ionicons name="arrow-back" size={28} color="#fff" /></TouchableOpacity>
+                <Text style={styles.headerTitle}>{(custDetail.ownerName || custDetail.shopName || 'Customer')}'s Profile</Text>
+                <View style={{ width: 36 }} />
             </View>
 
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            >
-                <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-
-                    {/* Profile Card — horizontal layout */}
-                    <View style={styles.profileCard}>
-                        <View style={styles.profileRow}>
-                            {/* Avatar */}
-                            <View style={styles.avatar}>
-                                <Text style={styles.avatarText}>
-                                    {customer.customerName?.charAt(0).toUpperCase()}
-                                </Text>
+            <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 100 }}>
+                {/* Profile Card */}
+                <View style={styles.profileCard}>
+                    <View style={styles.profileHeader}>
+                        <View style={styles.avatar}><Text style={styles.avatarText}>{(custDetail.ownerName || custDetail.shopName || 'C').charAt(0).toUpperCase()}</Text></View>
+                        <View style={styles.infoCol}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Text style={styles.ownerName}>{custDetail.ownerName || custDetail.shopName || 'Customer'}</Text>
+                                <View style={styles.srBadge}><Text style={styles.srBadgeText}>SR: {custDetail.srNumber}</Text></View>
                             </View>
-
-                            {/* Name / Mobile / Shop */}
-                            <View style={styles.profileInfo}>
-                                <Text style={styles.custName} numberOfLines={1}>{customer.customerName}</Text>
-                                <View style={styles.infoRow}>
-                                    <Ionicons name="call-outline" size={13} color="#888" />
-                                    <Text style={styles.infoText}>+91 {customer.mobileNumber}</Text>
-                                </View>
-                                {customer.shopName ? (
-                                    <View style={styles.infoRow}>
-                                        <Ionicons name="storefront-outline" size={13} color="#888" />
-                                        <Text style={styles.infoText} numberOfLines={1}>{customer.shopName}</Text>
-                                    </View>
-                                ) : null}
-                            </View>
-
-                            {/* Action icons */}
-                            <View style={styles.profileActions}>
-                                <TouchableOpacity style={styles.iconActionBtn} onPress={handleCall}>
-                                    <Ionicons name="call" size={20} color="#1565c0" />
-                                </TouchableOpacity>
-                                <TouchableOpacity style={[styles.iconActionBtn, { backgroundColor: '#e8f5e9' }]} onPress={handleWhatsApp}>
-                                    <Ionicons name="logo-whatsapp" size={20} color="#25d366" />
-                                </TouchableOpacity>
-                            </View>
+                            <Text style={styles.shopName}><Ionicons name="storefront-outline" size={13} color="#666" /> {custDetail.shopName}</Text>
                         </View>
                     </View>
+                    <View style={styles.divider} />
+                    <View style={styles.contactRow}>
+                        <View style={styles.contactItem}>
+                            <Ionicons name="call" size={16} color="#ff6600" />
+                            <Text style={styles.mobileText}>{custDetail.mobileNumber}</Text>
+                        </View>
+                        <View style={[styles.statusBadge, custDetail.status === 'active' ? { backgroundColor: '#fff5eb' } : { backgroundColor: '#ffebee' }]}>
+                            <Text style={[styles.statusText, custDetail.status === 'active' ? { color: '#ff6600' } : { color: '#d32f2f' }]}>
+                                {custDetail.status.toUpperCase()}
+                            </Text>
+                        </View>
+                    </View>
+                </View>
 
-                    {/* ===== Create Bill Section ===== */}
-                    <View style={styles.billSection}>
-                        {/* Title row */}
-                        <View style={styles.billTitleRow}>
-                            <View style={styles.billTitleLeft}>
-                                <Ionicons name="receipt-outline" size={20} color="#0c831f" />
-                                <Text style={styles.billSectionTitle}>Naya Bill Banao</Text>
-                            </View>
-                            <TouchableOpacity style={styles.addRowBtn} onPress={addRow}>
-                                <Ionicons name="add-circle" size={28} color="#0c831f" />
+                {/* Summary Section */}
+                <View style={[styles.summaryContainer, { paddingHorizontal: 10 }]}>
+                    <View style={styles.summaryBox}>
+                        <Text style={styles.summaryLabel}>Total</Text>
+                        <Text style={[styles.summaryValue, { color: '#333' }]}>₹{totalBill}</Text>
+                    </View>
+                    <View style={styles.summaryDivider} />
+                    <View style={styles.summaryBox}>
+                        <Text style={styles.summaryLabel}>Pending</Text>
+                        <Text style={[styles.summaryValue, { color: '#ff9800' }]}>₹{pendingBillTotal}</Text>
+                    </View>
+                    <View style={styles.summaryDivider} />
+                    <View style={styles.summaryBox}>
+                        <Text style={styles.summaryLabel}>Received</Text>
+                        <Text style={[styles.summaryValue, { color: '#4caf50' }]}>₹{totalReceived}</Text>
+                    </View>
+                    <View style={styles.summaryDivider} />
+                    <View style={styles.summaryBox}>
+                        <Text style={styles.summaryLabel}>Outstand</Text>
+                        <Text style={[styles.summaryValue, { color: outstanding > 0 ? '#d32f2f' : '#333' }]}>₹{outstanding}</Text>
+                    </View>
+                </View>
+
+                {/* ===== History Section ===== */}
+                <View style={styles.historySection}>
+                    <View style={styles.historyHeaderRow}>
+                        <View style={styles.historyHeaderLeft}>
+                            <Ionicons name="document-text-outline" size={20} color="#ff6600" />
+                            <Text style={styles.historyTitle}>Khata History</Text>
+                        </View>
+                        <TouchableOpacity style={styles.paymentBtn} onPress={() => setPaymentModalVisible(true)}>
+                            <Ionicons name="wallet-outline" size={16} color="#fff" />
+                            <Text style={styles.paymentBtnText}>Make Payment</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View>
+                            {billsLoading || paymentsLoading ? (
+                                <ActivityIndicator style={{ padding: 20 }} color="#ff6600" />
+                            ) : mixedFeed.length === 0 ? (
+                                <View style={styles.emptyHistory}>
+                                    <Ionicons name="receipt-outline" size={40} color="#eee" />
+                                    <Text style={styles.emptyHistoryText}>Koi hisaab nahi mila</Text>
+                                </View>
+                            ) : (
+                                mixedFeed.map((item, i) => (
+                                    item.feedType === 'bill' ? (
+                                        <View key={'b'+(item._id || i)} style={styles.billCard}>
+                                            <View style={styles.billCardTopRow}>
+                                                <View style={styles.billCardLeft}>
+                                                    <Text style={styles.billNumber}>Bill #{item.billNumber || '---'}</Text>
+                                                    <Text style={styles.billDate}>{new Date(item.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
+                                                </View>
+                                                <View style={styles.billCardRight}>
+                                                    <Text style={[styles.billTotal, { color: '#ff6600' }]}>+₹{item.grandTotal}</Text>
+                                                    <Text style={styles.itemNotes}>{item.notes || 'Goods given'}</Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    ) : (
+                                        <View key={'p'+(item._id || i)} style={[styles.billCard, { backgroundColor: '#f0fdf4' }]}>
+                                            <View style={styles.billCardTopRow}>
+                                                <View style={styles.billCardLeft}>
+                                                    <Text style={[styles.billNumber, { color: '#166534' }]}>Payment Received</Text>
+                                                    <Text style={styles.billDate}>{new Date(item.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
+                                                </View>
+                                                <View style={styles.billCardRight}>
+                                                    <Text style={[styles.billTotal, { color: '#16a34a' }]}>-₹{item.amount}</Text>
+                                                    <Text style={styles.itemNotes}>{item.paymentMode ? item.paymentMode.toUpperCase() : (item.notes || 'Cash/Online')}</Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    )
+                                ))
+                            )}
+                        </View>
+                </View>
+            </ScrollView>
+
+            {/* Floating Action Button */}
+            <TouchableOpacity style={styles.fab} onPress={handleOpenBillModal}>
+                <Ionicons name="add" size={32} color="#fff" />
+            </TouchableOpacity>
+
+            {/* ===== Add Bill Modal ===== */}
+            <Modal visible={addBillModalVisible} animationType="slide" transparent onRequestClose={() => setAddBillModalVisible(false)}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+                    <View style={[styles.modalSheet, cartMode ? { height: '80%' } : { height: '90%' }]}>
+                        <View style={styles.handleBar} />
+                        
+                        <View style={styles.modalHeader}>
+                            {cartMode ? (
+                                <TouchableOpacity onPress={() => setCartMode(false)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Ionicons name="arrow-back" size={24} color="#333" />
+                                    <Text style={[styles.modalTitle, { marginLeft: 8 }]}>Cart Summary</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <Text style={styles.modalTitle}>Select Items</Text>
+                            )}
+                            <TouchableOpacity onPress={() => setAddBillModalVisible(false)}>
+                                <Ionicons name="close-circle" size={28} color="#ccc" />
                             </TouchableOpacity>
                         </View>
 
-                        {/* Table Header */}
-                        <View style={styles.tableHeader}>
-                            <Text style={[styles.thText, styles.colSr]}>#</Text>
-                            <Text style={[styles.thText, styles.colItem]}>Item</Text>
-                            <Text style={[styles.thText, styles.colPrice]}>Price</Text>
-                            <Text style={[styles.thText, styles.colQty]}>Qty</Text>
-                            <Text style={[styles.thText, styles.colAmt]}>Amt</Text>
-                            <Text style={[styles.thText, styles.colDel]}> </Text>
-                        </View>
-
-                        {/* Bill Rows */}
-                        {billItems.map((item, idx) => (
-                            <View key={item.id} style={styles.tableRow}>
-                                {/* SR */}
-                                <Text style={[styles.srText, styles.colSr]}>{idx + 1}</Text>
-
-                                {/* Item Name — tap to open picker */}
-                                <TouchableOpacity
-                                    style={[styles.itemNameBtn, styles.colItem]}
-                                    onPress={() => openPicker(item.id)}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.itemNameText,
-                                            !item.itemName && { color: '#bbb' },
-                                        ]}
-                                        numberOfLines={1}
-                                    >
-                                        {item.itemName || 'Tap to select'}
-                                    </Text>
-                                    <Ionicons name="chevron-down" size={12} color="#aaa" />
-                                </TouchableOpacity>
-
-                                {/* Price */}
-                                <TextInput
-                                    style={[styles.cellInput, styles.colPrice]}
-                                    value={String(item.itemPrice)}
-                                    onChangeText={v => updateRow(item.id, 'itemPrice', v)}
-                                    keyboardType="decimal-pad"
-                                    placeholder="0"
-                                    placeholderTextColor="#ccc"
-                                />
-
-                                {/* Quantity */}
-                                <TextInput
-                                    style={[styles.cellInput, styles.colQty]}
-                                    value={String(item.quantity)}
-                                    onChangeText={v => updateRow(item.id, 'quantity', v)}
-                                    keyboardType="decimal-pad"
-                                    placeholder="0"
-                                    placeholderTextColor="#ccc"
-                                />
-
-                                {/* Amount */}
-                                <Text style={[styles.amtText, styles.colAmt]}>
-                                    ₹{getAmount(item).toFixed(0)}
-                                </Text>
-
-                                {/* Delete row */}
-                                <TouchableOpacity
-                                    style={styles.colDel}
-                                    onPress={() => removeRow(item.id)}
-                                >
-                                    <Ionicons
-                                        name="close-circle"
-                                        size={20}
-                                        color={billItems.length === 1 ? '#ddd' : '#ff5252'}
-                                    />
-                                </TouchableOpacity>
-                            </View>
-                        ))}
-
-                        {/* Grand Total */}
-                        <View style={styles.totalRow}>
-                            <Text style={styles.totalLabel}>Grand Total</Text>
-                            <Text style={styles.totalValue}>₹{grandTotal.toFixed(2)}</Text>
-                        </View>
-
-                        {/* Payment Status Toggle */}
-                        <View style={styles.statusToggleRow}>
-                            <Text style={styles.statusToggleLabel}>Payment Status:</Text>
-                            <View style={styles.statusToggleGroup}>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.statusToggleBtn,
-                                        paymentStatus === 'pending' && styles.statusToggleBtnActivePending,
-                                    ]}
-                                    onPress={() => setPaymentStatus('pending')}
-                                >
-                                    <Ionicons
-                                        name="time-outline"
-                                        size={14}
-                                        color={paymentStatus === 'pending' ? '#fff' : '#e65100'}
-                                    />
-                                    <Text style={[
-                                        styles.statusToggleBtnText,
-                                        paymentStatus === 'pending' && { color: '#fff' },
-                                    ]}>Pending</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.statusToggleBtn,
-                                        paymentStatus === 'done' && styles.statusToggleBtnActiveDone,
-                                    ]}
-                                    onPress={() => setPaymentStatus('done')}
-                                >
-                                    <Ionicons
-                                        name="checkmark-circle-outline"
-                                        size={14}
-                                        color={paymentStatus === 'done' ? '#fff' : '#0c831f'}
-                                    />
-                                    <Text style={[
-                                        styles.statusToggleBtnText,
-                                        paymentStatus === 'done' && { color: '#fff' },
-                                    ]}>Done</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
-                        
-
-                        {/* Create Bill Button */}
-                        <TouchableOpacity
-                            style={[styles.createBillBtn, creatingBill && { opacity: 0.7 }]}
-                            onPress={handleCreateBill}
-                            disabled={creatingBill}
-                        >
-                            {creatingBill ? (
-                                <ActivityIndicator color="#fff" size="small" />
-                            ) : (
-                                <>
-                                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                                    <Text style={styles.createBillText}>Bill Banao</Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* ===== Bill History Section ===== */}
-                    <View style={styles.historySection}>
-                        {/* Expand toggle */}
-                        <TouchableOpacity
-                            style={styles.historyHeaderRow}
-                            onPress={() => {
-                                if (!historyExpanded) fetchBills();
-                                setHistoryExpanded(v => !v);
-                            }}
-                        >
-                            <View style={styles.historyHeaderLeft}>
-                                <Ionicons name="document-text-outline" size={20} color="#0c831f" />
-                                <Text style={styles.historyTitle}>Bill History</Text>
-                                {bills.length > 0 && (
-                                    <View style={styles.billCountBadge}>
-                                        <Text style={styles.billCountText}>{bills.length}</Text>
-                                    </View>
-                                )}
-                            </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                {billsLoading && <ActivityIndicator size="small" color="#0c831f" />}
-                                <Ionicons
-                                    name={historyExpanded ? 'chevron-up' : 'chevron-down'}
-                                    size={20}
-                                    color="#0c831f"
-                                />
-                            </View>
-                        </TouchableOpacity>
-
-                        {historyExpanded && (
+                        {/* SELECT ITEMS MODE */}
+                        {!cartMode && (
                             <>
-                                {billsLoading ? (
-                                    <ActivityIndicator color="#0c831f" style={{ marginVertical: 20 }} />
-                                ) : bills.length === 0 ? (
-                                    <View style={styles.emptyHistory}>
-                                        <Ionicons name="receipt-outline" size={36} color="#ddd" />
-                                        <Text style={styles.emptyHistoryText}>Koi bill nahi mila</Text>
-                                    </View>
+                                {rateLoading ? (
+                                    <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator size="large" color="#ff6600" /></View>
                                 ) : (
-                                    bills.map((bill) => (
-                                        <View key={bill.billNumber} style={styles.billCard}>
-                                            {/* Top row: bill number + total + whatsapp */}
-                                            <View style={styles.billCardTopRow}>
-                                                <View style={styles.billCardLeft}>
-                                                    <Text style={styles.billNumber}>{bill.billNumber}</Text>
-                                                    <Text style={styles.billDate}>
-                                                        {new Date(bill.createdAt).toLocaleDateString('en-IN', {
-                                                            day: 'numeric', month: 'short', year: 'numeric'
-                                                        })}
-                                                    </Text>
-                                                </View>
-                                                <View style={styles.billCardRight}>
-                                                    <Text style={styles.billTotal}>₹{bill.grandTotal}</Text>
-                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                                        <View style={[
-                                                            styles.billStatusBadge,
-                                                            { backgroundColor: bill.paymentStatus === 'done' ? '#e8f5e9' : '#fff3e0' }
-                                                        ]}>
-                                                            <View style={[
-                                                                styles.billStatusDot,
-                                                                { backgroundColor: bill.paymentStatus === 'done' ? '#0c831f' : '#e65100' }
-                                                            ]} />
-                                                            <Text style={[
-                                                                styles.billStatusText,
-                                                                { color: bill.paymentStatus === 'done' ? '#0c831f' : '#e65100' }
-                                                            ]}>
-                                                                {bill.paymentStatus === 'done' ? 'Done' : 'Pending'}
-                                                            </Text>
-                                                        </View>
-                                                        {/* WhatsApp share */}
-                                                        <TouchableOpacity
-                                                            onPress={() => {
-                                                                const itemLines = (bill.items || []).map((it: any) =>
-                                                                    `• ${it.itemName} x${it.quantity} = ₹${it.itemPrice * it.quantity}`
-                                                                ).join('\n');
-                                                                const msg = `*Bill: ${bill.billNumber}*\nCustomer: ${customer.customerName}\n\n${itemLines}\n\n*Total: ₹${bill.grandTotal}*\nStatus: ${bill.paymentStatus === 'done' ? '✅ Done' : '⏳ Pending'}`;
-                                                                Linking.openURL(`whatsapp://send?phone=91${customer.mobileNumber}&text=${encodeURIComponent(msg)}`);
-                                                            }}
-                                                        >
-                                                            <Ionicons name="logo-whatsapp" size={22} color="#25d366" />
+                                    <ScrollView contentContainerStyle={styles.itemGrid}>
+                                        {rateList.map(item => {
+                                            const qty = getCartQty(item._id);
+                                            return (
+                                                <View key={item._id} style={styles.itemCard}>
+                                                    <View style={styles.itemCardImgPlaceholder}><Ionicons name="image-outline" size={32} color="#ddd" /></View>
+                                                    <Text style={styles.itemCardPrice}>₹{item.itemPrice}</Text>
+                                                    <Text style={styles.itemCardName} numberOfLines={2}>{item.itemName}</Text>
+                                                    
+                                                    {qty === 0 ? (
+                                                        <TouchableOpacity style={styles.itemAddBtn} onPress={() => handleAddToCart(item, 1)}>
+                                                            <Text style={styles.itemAddBtnText}>ADD</Text>
                                                         </TouchableOpacity>
-                                                    </View>
-                                                </View>
-                                            </View>
-                                            {/* Items list */}
-                                            {(bill.items || []).length > 0 && (
-                                                <View style={styles.billItemsList}>
-                                                    {(bill.items || []).map((it: any, i: number) => (
-                                                        <View key={i} style={styles.billItemRow}>
-                                                            <Text style={styles.billItemName} numberOfLines={1}>{it.itemName}</Text>
-                                                            <Text style={styles.billItemDetail}>x{it.quantity}  ₹{it.itemPrice * it.quantity}</Text>
+                                                    ) : (
+                                                        <View style={styles.qtyControls}>
+                                                            <TouchableOpacity style={styles.qtyBtn} onPress={() => handleAddToCart(item, -1)}><Ionicons name="remove" size={18} color="#fff" /></TouchableOpacity>
+                                                            <Text style={styles.qtyText}>{qty}</Text>
+                                                            <TouchableOpacity style={styles.qtyBtn} onPress={() => handleAddToCart(item, 1)}><Ionicons name="add" size={18} color="#fff" /></TouchableOpacity>
                                                         </View>
-                                                    ))}
+                                                    )}
                                                 </View>
-                                            )}
+                                            );
+                                        })}
+                                    </ScrollView>
+                                )}
+                                
+                                {/* Bottom Bar for View Cart */}
+                                {cartTotalItems > 0 && (
+                                    <View style={styles.viewCartBar}>
+                                        <View>
+                                            <Text style={styles.viewCartItems}>{cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}</Text>
+                                            <Text style={styles.viewCartTotal}>Total: ₹{cartTotalAmount}</Text>
                                         </View>
-                                    ))
+                                        <TouchableOpacity style={styles.viewCartBtn} onPress={() => setCartMode(true)}>
+                                            <Text style={styles.viewCartBtnText}>View Cart</Text>
+                                            <Ionicons name="arrow-forward" size={18} color="#ff6600" />
+                                        </TouchableOpacity>
+                                    </View>
                                 )}
                             </>
                         )}
-                    </View>
 
-                    <View style={{ height: 30 }} />
-                </ScrollView>
-            </KeyboardAvoidingView>
+                        {/* CART / SUMMARY MODE */}
+                        {cartMode && (
+                            <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                                <ScrollView style={{ flex: 1 }}>
+                                    <View style={styles.cartList}>
+                                        {cart.map(c => (
+                                            <View key={c.item._id} style={styles.cartRow}>
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={styles.cartItemName}>{c.item.itemName}</Text>
+                                                    <Text style={styles.cartItemPrice}>₹{c.item.itemPrice} x {c.quantity}</Text>
+                                                </View>
+                                                <Text style={styles.cartItemTotal}>₹{c.item.itemPrice * c.quantity}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                    
+                                    <View style={styles.cartDivider} />
+                                    
+                                    <View style={styles.cartTotalRow}>
+                                        <Text style={styles.cartTotalLabel}>Total Amount</Text>
+                                        <Text style={styles.cartTotalValue}>₹{cartTotalAmount}</Text>
+                                    </View>
+
+                                    {/* Payment Status & Notes */}
+                                    <Text style={[styles.label, { marginTop: 20 }]}>Payment Status</Text>
+                                    <View style={styles.statusToggleGroup}>
+                                        <TouchableOpacity style={[styles.statusToggleBtn, paymentStatus === 'pending' && styles.statusToggleBtnActivePending]} onPress={() => setPaymentStatus('pending')}>
+                                            <Ionicons name="time-outline" size={16} color={paymentStatus === 'pending' ? '#fff' : '#888'} />
+                                            <Text style={[styles.statusToggleBtnText, paymentStatus === 'pending' && { color: '#fff' }]}>Pending</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.statusToggleBtn, paymentStatus === 'done' && styles.statusToggleBtnActiveDone]} onPress={() => setPaymentStatus('done')}>
+                                            <Ionicons name="checkmark-circle-outline" size={16} color={paymentStatus === 'done' ? '#fff' : '#888'} />
+                                            <Text style={[styles.statusToggleBtnText, paymentStatus === 'done' && { color: '#fff' }]}>Done</Text>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <TextInput 
+                                        style={styles.notesInput} 
+                                        placeholder="Add note (optional)" 
+                                        value={notes} 
+                                        onChangeText={setNotes} 
+                                        multiline 
+                                    />
+                                </ScrollView>
+                                
+                                <View style={styles.actionRow}>
+                                    <TouchableOpacity style={styles.actionBtnOutline} onPress={() => setAddBillModalVisible(false)}><Text style={styles.actionBtnOutlineText}>Cancel</Text></TouchableOpacity>
+                                    <TouchableOpacity style={styles.actionBtnOutline} onPress={() => Alert.alert('Coming Soon', 'Print feature will be added soon')}><Text style={styles.actionBtnOutlineText}>Print</Text></TouchableOpacity>
+                                    <TouchableOpacity style={styles.actionBtnPrimary} onPress={handleCreateBill} disabled={creatingBill}>
+                                        {creatingBill ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.actionBtnPrimaryText}>Save</Text>}
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
 
             {/* Success Toast */}
-            <Animated.View style={[styles.successToast, { opacity: successOpacity }]}>
-                <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                <Text style={styles.successToastText}>Bill Successfully Created!</Text>
-            </Animated.View>
-
-            {/* ===== Item Picker Modal ===== */}
-            <Modal
-                visible={pickerVisible}
-                animationType="slide"
-                transparent
-                onRequestClose={() => setPickerVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalSheet}>
-                        {/* Modal Header */}
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Item Chuniye</Text>
-                            <TouchableOpacity onPress={() => setPickerVisible(false)}>
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Search / Manual Input */}
-                        <View style={styles.searchRow}>
-                            <Ionicons name="search" size={18} color="#888" style={{ marginRight: 8 }} />
-                            <TextInput
-                                style={styles.searchInput}
-                                value={searchText}
-                                onChangeText={setSearchText}
-                                placeholder="Naam likhiye ya neeche se chuniye..."
-                                placeholderTextColor="#bbb"
-                                autoFocus
-                            />
-                        </View>
-
-                        {/* Confirm manual entry button */}
-                        {searchText.trim().length > 0 && (
-                            <TouchableOpacity
-                                style={styles.manualConfirmBtn}
-                                onPress={confirmManualItem}
-                            >
-                                <Ionicons name="add-circle-outline" size={18} color="#0c831f" />
-                                <Text style={styles.manualConfirmText}>
-                                    "{searchText.trim()}" use karo
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-
-                        {/* Rate list */}
-                        <Text style={styles.rateListLabel}>Aapke Items:</Text>
-
-                        {rateLoading ? (
-                            <ActivityIndicator color="#0c831f" style={{ marginTop: 20 }} />
-                        ) : filteredRate.length === 0 ? (
-                            <Text style={styles.emptyRate}>Koi item nahi mila. Upar naam likhke add karein.</Text>
-                        ) : (
-                            <FlatList
-                                data={filteredRate}
-                                keyExtractor={(_, i) => String(i)}
-                                style={{ maxHeight: 320 }}
-                                keyboardShouldPersistTaps="handled"
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        style={styles.rateCard}
-                                        onPress={() => selectItem(item)}
-                                    >
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={styles.rateItemName}>{item.itemName}</Text>
-                                        </View>
-                                        <View style={styles.ratePriceBadge}>
-                                            <Text style={styles.rateItemPrice}>₹{item.itemPrice}</Text>
-                                        </View>
-                                        <Ionicons name="add-circle-outline" size={20} color="#0c831f" style={{ marginLeft: 8 }} />
-                                    </TouchableOpacity>
-                                )}
-                            />
-                        )}
-                    </View>
+            {showToast && (
+                <View style={styles.successToast}>
+                    <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                    <Text style={styles.successToastText}>Saved Successfully!</Text>
                 </View>
+            )}
+
+            {/* Make Payment Modal */}
+            <Modal visible={paymentModalVisible} animationType="slide" transparent onRequestClose={() => setPaymentModalVisible(false)}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+                    <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => !creatingPayment && setPaymentModalVisible(false)} />
+                    <View style={[styles.modalSheet, { height: 'auto', maxHeight: '70%' }]}>
+                        <View style={styles.handleBar} />
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Receive Payment</Text>
+                            <TouchableOpacity onPress={() => setPaymentModalVisible(false)}><Ionicons name="close-circle" size={28} color="#ccc" /></TouchableOpacity>
+                        </View>
+                        
+                        <View style={styles.paymentInputWrapper}>
+                            <Text style={styles.rupeePrefix}>₹</Text>
+                            <TextInput 
+                                style={styles.paymentAmountInput} 
+                                placeholder="0" 
+                                placeholderTextColor="#ccc"
+                                keyboardType="numeric" 
+                                value={paymentAmount} 
+                                onChangeText={setPaymentAmount} 
+                                autoFocus 
+                            />
+                        </View>
+                        <View style={[styles.statusToggleGroup, { marginBottom: 20 }]}>
+                            <TouchableOpacity 
+                                style={[styles.statusToggleBtn, paymentMode === 'cash' && { backgroundColor: '#ff9800' }]} 
+                                onPress={() => setPaymentMode('cash')}
+                            >
+                                <Ionicons name="cash-outline" size={16} color={paymentMode === 'cash' ? '#fff' : '#888'} />
+                                <Text style={[styles.statusToggleBtnText, paymentMode === 'cash' && { color: '#fff' }]}>Cash</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={[styles.statusToggleBtn, paymentMode === 'online' && { backgroundColor: '#2196f3' }]} 
+                                onPress={() => setPaymentMode('online')}
+                            >
+                                <Ionicons name="phone-portrait-outline" size={16} color={paymentMode === 'online' ? '#fff' : '#888'} />
+                                <Text style={[styles.statusToggleBtnText, paymentMode === 'online' && { color: '#fff' }]}>Online</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <TouchableOpacity 
+                            style={styles.datePickerBtn} 
+                            onPress={() => setShowDatePicker(true)}
+                        >
+                            <Ionicons name="calendar-outline" size={18} color="#ff6600" />
+                            <Text style={styles.datePickerBtnText}>
+                                {paymentDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={paymentDate}
+                                mode="date"
+                                display="default"
+                                onChange={(event: DateTimePickerEvent, date?: Date) => {
+                                    setShowDatePicker(false);
+                                    if (date) setPaymentDate(date);
+                                }}
+                            />
+                        )}
+
+                        <TextInput 
+                            style={styles.notesInput} 
+                            placeholder="Payment notes (e.g. UPI ID, Check No)" 
+                            value={paymentNotes} 
+                            onChangeText={setPaymentNotes} 
+                        />
+                        <View style={[styles.actionRow, { marginBottom: 20 }]}>
+                            <TouchableOpacity style={styles.actionBtnOutline} onPress={() => setPaymentModalVisible(false)}><Text style={styles.actionBtnOutlineText}>Cancel</Text></TouchableOpacity>
+                            <TouchableOpacity style={styles.actionBtnPrimary} onPress={handleMakePayment} disabled={creatingPayment}>
+                                {creatingPayment ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.actionBtnPrimaryText}>SAVE PAYMENT</Text>}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
     );
 }
 
-// ---------- Styles ----------
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8f9fa' },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    container: { flex: 1, backgroundColor: '#f6f9f6' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 15, backgroundColor: '#ff6600' },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
+    backBtn: { padding: 4 },
+    content: { padding: 15 },
+    
+    profileCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5 },
+    
+    // Summary
+    summaryContainer: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 16, padding: 15, marginTop: 15, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5 },
+    summaryBox: { flex: 1, alignItems: 'center' },
+    summaryDivider: { width: 1, backgroundColor: '#eee' },
+    summaryLabel: { fontSize: 10, fontWeight: '800', color: '#888', marginBottom: 4 },
+    summaryValue: { fontSize: 15, fontWeight: '900' },
+    
+    paymentBtn: { flexDirection: 'row', backgroundColor: '#4caf50', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignItems: 'center', gap: 5 },
+    paymentBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+    itemNotes: { fontSize: 12, color: '#666', fontWeight: '600', marginTop: 4 },
+    
+    datePickerBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff5eb', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 12, marginBottom: 20, gap: 10, borderWidth: 1, borderColor: '#ffe0b2' },
+    datePickerBtnText: { fontSize: 14, fontWeight: '700', color: '#ff6600' },
 
-    // Header
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingTop: 40,
-        paddingBottom: 10,
-        backgroundColor: '#ffae00ff',
-    },
-    backBtn: { padding: 8 },
-    headerTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
+    paymentInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff5eb', borderWidth: 2, borderColor: '#ffe0b2', borderRadius: 16, paddingHorizontal: 20, marginVertical: 20 },
+    rupeePrefix: { fontSize: 30, fontWeight: '900', color: '#ff6600', marginRight: 10 },
+    paymentAmountInput: { flex: 1, fontSize: 32, fontWeight: '900', color: '#111', paddingVertical: 15 },
 
-    // Profile card
-    profileCard: {
-        backgroundColor: '#fff',
-        paddingVertical: 18,
-        paddingHorizontal: 16,
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-    },
-    profileRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-    },
-    avatar: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#0c831f20',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#0c831f',
-        flexShrink: 0,
-    },
-    avatarText: { fontSize: 22, fontWeight: '900', color: '#0c831f' },
-    profileInfo: { flex: 1, gap: 3 },
-    custName: { fontSize: 17, fontWeight: '900', color: '#111' },
-    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    infoText: { fontSize: 13, color: '#666', fontWeight: '600', flex: 1 },
-    profileActions: { flexDirection: 'column', gap: 8, alignItems: 'center' },
-    iconActionBtn: {
-        width: 38,
-        height: 38,
-        borderRadius: 12,
-        backgroundColor: '#e3f2fd',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
+    profileHeader: { flexDirection: 'row', alignItems: 'center' },
+    avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#fff5eb', justifyContent: 'center', alignItems: 'center' },
+    avatarText: { fontSize: 24, fontWeight: '900', color: '#ff6600' },
+    infoCol: { marginLeft: 16, flex: 1 },
+    ownerName: { fontSize: 18, fontWeight: '900', color: '#111' },
+    srBadge: { backgroundColor: '#fff5eb', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+    srBadgeText: { fontSize: 11, fontWeight: '900', color: '#ff6600' },
+    shopName: { fontSize: 13, color: '#666', marginTop: 4, fontWeight: '600' },
+    divider: { height: 1, backgroundColor: '#f0f0f0', marginVertical: 16 },
+    contactRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    contactItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    mobileText: { fontSize: 14, fontWeight: '700', color: '#444' },
+    statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+    statusText: { fontSize: 11, fontWeight: '900' },
 
-    // ===== Bill Section =====
-    billSection: {
-        marginTop: 20,
-        backgroundColor: '#fff',
-        padding: 16,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-    },
-    billTitleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 14,
-    },
-    billTitleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    billSectionTitle: { fontSize: 16, fontWeight: '800', color: '#0c831f' },
-    addRowBtn: { padding: 2 },
-
-    // Table
-    tableHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f0faf2',
-        borderRadius: 10,
-        paddingVertical: 8,
-        paddingHorizontal: 4,
-        marginBottom: 4,
-    },
-    thText: { fontSize: 11, fontWeight: '800', color: '#0c831f', textTransform: 'uppercase' },
-
-    tableRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 6,
-        paddingHorizontal: 4,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-
-    // Columns
-    colSr: { width: 22, textAlign: 'center' },
-    colItem: { flex: 2, marginHorizontal: 4 },
-    colPrice: { width: 56, textAlign: 'center' },
-    colQty: { width: 44, textAlign: 'center' },
-    colAmt: { width: 52, textAlign: 'right' },
-    colDel: { width: 28, alignItems: 'center' },
-
-    srText: { fontSize: 13, color: '#888', fontWeight: '700', textAlign: 'center' },
-
-    itemNameBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f9f9f9',
-        borderRadius: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 7,
-        borderWidth: 1,
-        borderColor: '#eee',
-        gap: 4,
-    },
-    itemNameText: { fontSize: 13, color: '#333', fontWeight: '600', flex: 1 },
-
-    cellInput: {
-        fontSize: 13,
-        color: '#333',
-        fontWeight: '700',
-        backgroundColor: '#f9f9f9',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#eee',
-        paddingHorizontal: 6,
-        paddingVertical: 6,
-        textAlign: 'center',
-    },
-
-    amtText: { fontSize: 13, color: '#0c831f', fontWeight: '800', textAlign: 'right' },
-
-    totalRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 12,
-        backgroundColor: '#e8f5e9',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-    },
-    totalLabel: { fontSize: 14, fontWeight: '800', color: '#333' },
-    totalValue: { fontSize: 18, fontWeight: '900', color: '#0c831f' },
-
-    notesInput: {
-        marginTop: 12,
-        backgroundColor: '#f9f9f9',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#eee',
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        fontSize: 13,
-        color: '#444',
-        minHeight: 56,
-        textAlignVertical: 'top',
-    },
-
-    createBillBtn: {
-        marginTop: 14,
-        backgroundColor: '#0c831f',
-        borderRadius: 14,
-        paddingVertical: 14,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
-        elevation: 3,
-    },
-    createBillText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-
-    // Payment Status Toggle
-    statusToggleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 12,
-        gap: 10,
-    },
-    statusToggleLabel: { fontSize: 13, fontWeight: '700', color: '#555' },
-    statusToggleGroup: { flexDirection: 'row', gap: 8, flex: 1, justifyContent: 'flex-end' },
-    statusToggleBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-        paddingHorizontal: 14,
-        paddingVertical: 7,
-        borderRadius: 10,
-        borderWidth: 1.5,
-        borderColor: '#ddd',
-        backgroundColor: '#f9f9f9',
-    },
-    statusToggleBtnActivePending: {
-        backgroundColor: '#e65100',
-        borderColor: '#e65100',
-    },
-    statusToggleBtnActiveDone: {
-        backgroundColor: '#0c831f',
-        borderColor: '#0c831f',
-    },
-    statusToggleBtnText: { fontSize: 13, fontWeight: '800', color: '#555' },
-
-    // Bill History Section
-    historySection: {
-        marginTop: 16,
-        marginBottom: 8,
-        backgroundColor: '#fff',
-        overflow: 'hidden',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-    },
-    historyHeaderRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 18,
-        borderBottomWidth: 0,
-    },
+    historySection: { marginTop: 16, backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', elevation: 2 },
+    historyHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18 },
     historyHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    historyTitle: { fontSize: 15, fontWeight: '800', color: '#0c831f' },
-    billCountBadge: {
-        backgroundColor: '#e8f5e9',
-        borderRadius: 10,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-    },
-    billCountText: { fontSize: 12, fontWeight: '800', color: '#0c831f' },
+    historyTitle: { fontSize: 16, fontWeight: '800', color: '#111' },
     emptyHistory: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-    emptyHistoryText: { fontSize: 13, color: '#bbb', fontWeight: '600' },
-    billCard: {
-        paddingHorizontal: 18,
-        paddingVertical: 12,
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-    },
-    billCardTopRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-    },
+    emptyHistoryText: { fontSize: 14, color: '#bbb', fontWeight: '600' },
+    billCard: { paddingHorizontal: 18, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+    billCardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     billCardLeft: { gap: 3 },
     billCardRight: { alignItems: 'flex-end', gap: 5 },
-    billItemsList: {
-        marginTop: 8,
-        backgroundColor: '#f8fbf8',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        gap: 4,
-    },
-    billItemRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    billItemName: { fontSize: 12, color: '#444', fontWeight: '600', flex: 1 },
-    billItemDetail: { fontSize: 12, color: '#0c831f', fontWeight: '700' },
     billNumber: { fontSize: 14, fontWeight: '800', color: '#222' },
     billDate: { fontSize: 12, color: '#888', fontWeight: '600' },
-    billTotal: { fontSize: 16, fontWeight: '900', color: '#0c831f' },
-    billStatusBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-        paddingHorizontal: 10,
-        paddingVertical: 3,
-        borderRadius: 8,
-    },
+    billTotal: { fontSize: 16, fontWeight: '900', color: '#222' },
+    billStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
     billStatusDot: { width: 7, height: 7, borderRadius: 4 },
     billStatusText: { fontSize: 11, fontWeight: '800' },
 
-    // Success Toast
-    successToast: {
-        position: 'absolute',
-        bottom: 30,
-        alignSelf: 'center',
-        backgroundColor: '#0c831f',
-        borderRadius: 30,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        elevation: 8,
-    },
+    // FAB
+    fab: { position: 'absolute', bottom: 25, right: 25, width: 60, height: 60, borderRadius: 30, backgroundColor: '#ff6600', justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#ff6600', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8 },
+
+    // Modal
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 30 },
+    handleBar: { width: 40, height: 4, backgroundColor: '#ddd', borderRadius: 2, alignSelf: 'center', marginBottom: 15 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+    modalTitle: { fontSize: 20, fontWeight: '900', color: '#111' },
+
+    // Item Grid
+    itemGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingBottom: 80 },
+    itemCard: { width: '48%', backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 12, marginBottom: 12, elevation: 1 },
+    itemCardImgPlaceholder: { height: 60, backgroundColor: '#f9f9f9', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+    itemCardPrice: { fontSize: 18, fontWeight: '900', color: '#222' },
+    itemCardName: { fontSize: 13, fontWeight: '700', color: '#555', height: 35, marginBottom: 10 },
+    itemAddBtn: { borderWidth: 1, borderColor: '#ff6600', borderRadius: 8, paddingVertical: 6, alignItems: 'center' },
+    itemAddBtnText: { color: '#ff6600', fontWeight: '900', fontSize: 12 },
+    qtyControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#ff6600', borderRadius: 8, paddingHorizontal: 4, paddingVertical: 4 },
+    qtyBtn: { padding: 4 },
+    qtyText: { color: '#fff', fontWeight: '900', fontSize: 14 },
+
+    // View Cart Bar
+    viewCartBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#ff6600', padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+    viewCartItems: { color: '#fff', fontSize: 12, fontWeight: '700', opacity: 0.9 },
+    viewCartTotal: { color: '#fff', fontSize: 18, fontWeight: '900' },
+    viewCartBtn: { backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, gap: 6 },
+    viewCartBtnText: { color: '#ff6600', fontWeight: '900', fontSize: 14 },
+
+    // Cart Mode UI
+    cartList: { marginTop: 10 },
+    cartRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    cartItemName: { fontSize: 15, fontWeight: '700', color: '#222' },
+    cartItemPrice: { fontSize: 13, color: '#777', marginTop: 2, fontWeight: '600' },
+    cartItemTotal: { fontSize: 16, fontWeight: '900', color: '#ff6600' },
+    cartDivider: { height: 1, backgroundColor: '#eee', marginVertical: 15 },
+    cartTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    cartTotalLabel: { fontSize: 16, fontWeight: '800', color: '#333' },
+    cartTotalValue: { fontSize: 22, fontWeight: '900', color: '#111' },
+
+    label: { fontSize: 13, fontWeight: '700', color: '#555', marginBottom: 8 },
+    statusToggleGroup: { flexDirection: 'row', gap: 10 },
+    statusToggleBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 12, borderRadius: 12, backgroundColor: '#f0f0f0' },
+    statusToggleBtnActivePending: { backgroundColor: '#ff9800' },
+    statusToggleBtnActiveDone: { backgroundColor: '#4caf50' },
+    statusToggleBtnText: { fontSize: 14, fontWeight: '800', color: '#888' },
+    
+    notesInput: { marginTop: 20, backgroundColor: '#f9f9f9', borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 14, fontSize: 14, minHeight: 80, textAlignVertical: 'top' },
+
+    actionRow: { flexDirection: 'row', gap: 10, marginTop: 20 },
+    actionBtnOutline: { flex: 1, borderWidth: 1.5, borderColor: '#ddd', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+    actionBtnOutlineText: { fontSize: 14, fontWeight: '800', color: '#666' },
+    actionBtnPrimary: { flex: 2, backgroundColor: '#ff6600', paddingVertical: 14, borderRadius: 12, alignItems: 'center', elevation: 4 },
+    actionBtnPrimaryText: { color: '#fff', fontSize: 15, fontWeight: '900' },
+
+    successToast: { position: 'absolute', bottom: 100, alignSelf: 'center', backgroundColor: '#4caf50', borderRadius: 30, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12, elevation: 8 },
     successToastText: { color: '#fff', fontWeight: '800', fontSize: 14 },
-
-    // ===== Item Picker Modal =====
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        justifyContent: 'flex-end',
-    },
-    modalSheet: {
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        paddingHorizontal: 20,
-        paddingBottom: 30,
-        paddingTop: 16,
-        minHeight: 400,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 14,
-    },
-    modalTitle: { fontSize: 18, fontWeight: '900', color: '#111' },
-
-    searchRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        marginBottom: 8,
-        borderWidth: 1,
-        borderColor: '#e8f5e9',
-    },
-    searchInput: { flex: 1, fontSize: 14, color: '#333', fontWeight: '600' },
-
-    manualConfirmBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        backgroundColor: '#e8f5e9',
-        borderRadius: 10,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        marginBottom: 12,
-    },
-    manualConfirmText: { fontSize: 14, color: '#0c831f', fontWeight: '700', flex: 1 },
-
-    rateListLabel: {
-        fontSize: 12,
-        fontWeight: '800',
-        color: '#aaa',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: 8,
-        marginTop: 4,
-    },
-    rateCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 4,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    rateItemName: { fontSize: 15, fontWeight: '700', color: '#222' },
-    ratePriceBadge: {
-        backgroundColor: '#e8f5e9',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-    },
-    rateItemPrice: { fontSize: 13, fontWeight: '800', color: '#0c831f' },
-    emptyRate: { fontSize: 13, color: '#aaa', textAlign: 'center', marginTop: 20, fontWeight: '600' },
 });
+
+
+
+
+
+
+
+
+
+
+
+
+

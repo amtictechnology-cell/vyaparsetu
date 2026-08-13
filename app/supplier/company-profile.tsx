@@ -1,4 +1,4 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+﻿import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -8,6 +8,7 @@ import { BASE_URL } from '../../constants/Config';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
     FlatList,
     KeyboardAvoidingView,
     Modal,
@@ -51,6 +52,21 @@ export default function SupplierCompanyProfile() {
     const { id, name, mobile, status } = params;
 
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const pulseAnim = React.useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        if (showSuccess) {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(pulseAnim, { toValue: 1.2, duration: 500, useNativeDriver: true }),
+                    Animated.timing(pulseAnim, { toValue: 1, duration: 500, useNativeDriver: true })
+                ])
+            ).start();
+        } else {
+            pulseAnim.setValue(1);
+        }
+    }, [showSuccess]);
     const [summary, setSummary] = useState<Summary>({ totalTaken: 0, totalGiven: 0, balance: 0 });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -130,10 +146,11 @@ export default function SupplierCompanyProfile() {
                 body: formData as any,
             });
             const data = await res.json();
-            if (res.ok && data.success) {
-                Alert.alert('✅ Success', isEdit ? 'Entry update ho gayi!' : 'Entry save ho gayi!');
+                        if (res.ok && data.success) {
                 setTransModal(false);
                 resetForm();
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 1000);
                 fetchTransactions();
             } else { Alert.alert('Error', data.message || 'Error aa gaya.'); }
         } catch (e) { Alert.alert('Network Error', 'Server se connect nahi ho pa raha.'); }
@@ -195,38 +212,38 @@ export default function SupplierCompanyProfile() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#111" />
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <View style={styles.headerInfo}>
                     <Text style={styles.headerTitle} numberOfLines={1}>{name || 'Company Khata'}</Text>
                     <Text style={styles.headerSub}>+91 {mobile}</Text>
                 </View>
                 <TouchableOpacity style={styles.headerIconBtn}>
-                    <Ionicons name="search-outline" size={22} color="#111" />
+                    <Ionicons name="search-outline" size={22} color="#fff" />
                 </TouchableOpacity>
             </View>
 
             {/* Summary Bar */}
             <View style={styles.summaryBar}>
                 <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>YOU GOT (MAAL)</Text>
-                    <Text style={[styles.summaryValue, { color: '#d32f2f' }]}>₹{summary.totalTaken.toLocaleString('en-IN')}</Text>
+                    <Text style={styles.summaryLabel}>Liya (Maal)</Text>
+                    <Text style={[styles.summaryValue, { color: '#1565c0' }]}>₹{summary.totalTaken.toLocaleString('en-IN')}</Text>
                 </View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>YOU GAVE (PAY)</Text>
-                    <Text style={[styles.summaryValue, { color: '#0c831f' }]}>₹{summary.totalGiven.toLocaleString('en-IN')}</Text>
+                    <Text style={styles.summaryLabel}>Diya (Pay)</Text>
+                    <Text style={[styles.summaryValue, { color: '#ff6600' }]}>₹{summary.totalGiven.toLocaleString('en-IN')}</Text>
                 </View>
             </View>
 
             <View style={styles.netBalanceRow}>
                 <Text style={styles.netBalanceText}>
-                    NET BALANCE: <Text style={{ color: summary.balance >= 0 ? '#d32f2f' : '#0c831f', fontWeight: '900' }}>
-                        ₹{Math.abs(summary.balance).toLocaleString('en-IN')} {summary.balance >= 0 ? 'YOU OWE' : 'YOU GET'}
+                    NET BALANCE: <Text style={{ color: summary.balance >= 0 ? '#1565c0' : '#ff6600', fontWeight: '900' }}>
+                        ₹{Math.abs(summary.balance).toLocaleString('en-IN')} {summary.balance >= 0 ? 'Aapko Dene Hai' : 'Aapko Lene Hai'}
                     </Text>
                 </Text>
             </View>
@@ -234,8 +251,8 @@ export default function SupplierCompanyProfile() {
             {/* List Header */}
             <View style={styles.listHeader}>
                 <Text style={[styles.listHeaderText, { flex: 2 }]}>DATE/REMARK</Text>
-                <Text style={[styles.listHeaderText, { flex: 1, textAlign: 'center', color: '#d32f2f' }]}>YOU GOT</Text>
-                <Text style={[styles.listHeaderText, { flex: 1, textAlign: 'center', color: '#0c831f' }]}>YOU GAVE</Text>
+                <Text style={[styles.listHeaderText, { flex: 1, textAlign: 'center', color: '#1565c0' }]}>Liya</Text>
+                <Text style={[styles.listHeaderText, { flex: 1, textAlign: 'center', color: '#ff6600' }]}>Diya</Text>
             </View>
 
             <FlatList
@@ -250,10 +267,10 @@ export default function SupplierCompanyProfile() {
             {/* Bottom Buttons */}
             <View style={styles.bottomButtons}>
                 <TouchableOpacity style={[styles.bottomBtn, styles.btnGiven]} onPress={() => { resetForm(); setTransType('given'); setTransModal(true); }}>
-                    <Text style={[styles.btnText, { color: '#0c831f' }]}>YOU GAVE ₹</Text>
+                    <Text style={[styles.btnText, { color: '#fff' }]}>Diya ₹</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.bottomBtn, styles.btnTaken]} onPress={() => { resetForm(); setTransType('taken'); setTransModal(true); }}>
-                    <Text style={[styles.btnText, { color: '#d32f2f' }]}>YOU GOT ₹</Text>
+                    <Text style={[styles.btnText, { color: '#fff' }]}>Liya ₹</Text>
                 </TouchableOpacity>
             </View>
 
@@ -263,7 +280,7 @@ export default function SupplierCompanyProfile() {
                     <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => !saving && setTransModal(false)} />
                     <View style={styles.modalSheet}>
                         <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: transType === 'taken' ? '#d32f2f' : '#0c831f' }]}>
+                            <Text style={[styles.modalTitle, { color: transType === 'taken' ? '#1565c0' : '#ff6600' }]}>
                                 {isEdit ? 'Edit Entry' : `Add Entry (${transType === 'taken' ? 'Maal Liya' : 'Paise Diye'})`}
                             </Text>
                             <TouchableOpacity onPress={() => setTransModal(false)}><Ionicons name="close" size={24} color="#888" /></TouchableOpacity>
@@ -286,14 +303,44 @@ export default function SupplierCompanyProfile() {
                                 <TextInput style={styles.modalTextInput} placeholder="Bill No. (Optional)" value={billNumber} onChangeText={setBillNumber} />
                             </View>
                             {showDatePicker && <DateTimePicker value={date} mode="date" onChange={onDateChange} />}
-                            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: transType === 'taken' ? '#d32f2f' : '#0c831f' }]} onPress={handleSaveTransaction} disabled={saving}>
+                            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: transType === 'taken' ? '#1565c0' : '#ff6600' }]} onPress={handleSaveTransaction} disabled={saving}>
                                 {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>SAVE ENTRY</Text>}
                             </TouchableOpacity>
                         </ScrollView>
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
-        </SafeAreaView>
+
+            {/* Success Animation Overlay */}
+            {showSuccess && (
+                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }]}>
+                    <Animated.View style={{
+                        width: 120, height: 120,
+                        borderRadius: 60,
+                        backgroundColor: 'rgba(255,102,0,0.2)',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        transform: [{ scale: pulseAnim }]
+                    }}>
+                        <View style={{
+                            width: 80, height: 80,
+                            borderRadius: 40,
+                            backgroundColor: '#ff6600',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            elevation: 10,
+                            shadowColor: '#ff6600',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.5,
+                            shadowRadius: 10
+                        }}>
+                            <Ionicons name="checkmark" size={50} color="#fff" />
+                        </View>
+                    </Animated.View>
+                    <Text style={{ marginTop: 30, color: '#ff6600', fontSize: 22, fontWeight: '900' }}>Entry Saved!</Text>
+                </View>
+            )}
+        </View>
     );
 }
 
@@ -303,14 +350,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingTop: Platform.OS === 'ios' ? 0 : 40,
+        paddingTop: Platform.OS === 'ios' ? 40 : 50,
         paddingBottom: 15,
-        backgroundColor: '#ffd103ff',
+        backgroundColor: '#ff6600'
     },
     backBtn: { width: 40, height: 40, justifyContent: 'center' },
     headerInfo: { flex: 1, marginLeft: 8 },
-    headerTitle: { fontSize: 18, fontWeight: '900', color: '#111' },
-    headerSub: { fontSize: 12, color: '#888', fontWeight: '700' },
+    headerTitle: { fontSize: 18, fontWeight: '900', color: '#fff' },
+    headerSub: { fontSize: 12, color: '#fff', fontWeight: '800' },
     headerIconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
 
     summaryBar: { flexDirection: 'row', backgroundColor: '#fff', paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
@@ -355,43 +402,52 @@ const styles = StyleSheet.create({
 
     cardRight: { flex: 1.5, flexDirection: 'row' },
     amountCell: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
-    takenBg: { backgroundColor: '#fff5f5' }, // Light pink for taken
-    takenText: { fontSize: 16, fontWeight: '900', color: '#d32f2f', textAlign: 'center' },
-    givenText: { fontSize: 16, fontWeight: '900', color: '#0c831f', textAlign: 'center' },
+    takenBg: { backgroundColor: '#e8f4fe' }, // Light pink for taken
+    takenText: { fontSize: 16, fontWeight: '900', color: '#1565c0', textAlign: 'center' },
+    givenText: { fontSize: 16, fontWeight: '900', color: '#ff6600', textAlign: 'center' },
 
     bottomButtons: { flexDirection: 'row', position: 'absolute', bottom: 0, width: '100%', padding: 12, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee', gap: 10 },
     bottomBtn: { flex: 1, paddingVertical: 14, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-    btnGiven: { backgroundColor: '#fff', borderColor: '#0c831f' },
-    btnTaken: { backgroundColor: '#fff', borderColor: '#d32f2f' },
+    btnGiven: { backgroundColor: '#ff6600', borderColor: '#ff6600' },
+    btnTaken: { backgroundColor: '#1565c0', borderColor: '#1565c0' },
     btnText: { fontSize: 15, fontWeight: '900' },
 
     modalOverlay: { 
         flex: 1, 
-        backgroundColor: 'rgba(0,0,0,0.6)', 
-        justifyContent: 'center', // Center the modal
-        paddingHorizontal: 20, 
+        backgroundColor: 'rgba(0,0,0,0.45)', 
+        justifyContent: 'flex-end',
     },
     modalSheet: { 
         backgroundColor: '#fff', 
-        borderRadius: 0, // No border radius
+        borderTopLeftRadius: 28, 
+        borderTopRightRadius: 28,
         padding: 24, 
+        paddingBottom: 36,
         elevation: 10,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.3,
+        shadowOffset: { width: 0, height: -5 },
+        shadowOpacity: 0.1,
         shadowRadius: 10,
     },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    modalTitle: { fontSize: 18, fontWeight: '900' },
+    modalTitle: { fontSize: 16, fontWeight: '800' },
     amountInputBox: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 2, borderBottomColor: '#f0f0f0', marginBottom: 20, paddingBottom: 10 },
-    modalCurrency: { fontSize: 24, fontWeight: '900', marginRight: 10 },
-    modalAmountInput: { flex: 1, fontSize: 32, fontWeight: '900' },
+    modalCurrency: { fontSize: 20, fontWeight: '800', marginRight: 10 },
+    modalAmountInput: { flex: 1, fontSize: 28, fontWeight: '800' },
     inputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f7f8f9', padding: 15, borderRadius: 10, marginBottom: 15 },
-    modalDateText: { fontSize: 15, fontWeight: '700' },
-    modalTextInput: { flex: 1, fontSize: 15, fontWeight: '700' },
+    modalDateText: { fontSize: 14, fontWeight: '600' },
+    modalTextInput: { flex: 1, fontSize: 14, fontWeight: '600' },
     saveBtn: { paddingVertical: 16, borderRadius: 10, alignItems: 'center', marginTop: 10 },
-    saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+    saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
     emptyContainer: { alignItems: 'center', marginTop: 100 },
     emptyText: { fontSize: 16, color: '#bbb', fontWeight: '700' }
 });
+
+
+
+
+
+
+
+
 

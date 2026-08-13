@@ -162,21 +162,21 @@ export default function SettingsScreen() {
     if (loading) {
         return (
             <SafeAreaView style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-                <ActivityIndicator size="large" color="#0c831f" />
+                <ActivityIndicator size="large" color="#ff6600" />
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="#ff6600" />
 
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{profile?.businessName || "Hotel"}</Text>
+                <Text style={styles.headerTitle}>Settings</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -185,14 +185,14 @@ export default function SettingsScreen() {
                 <View style={styles.hotelBanner}>
                     <View style={styles.bannerRow}>
                         <View style={styles.avatarContainer}>
-                            <Ionicons name="person" size={28} color="#ffb703" />
+                            <Ionicons name="person" size={28} color="#ff6600" />
                         </View>
                         <View style={styles.profileDetails}>
                             <Text style={styles.businessName}>{profile?.businessName || "Your Business"}</Text>
                             <Text style={styles.categoryBadge}>{(profile?.businessCategory || "Category").toUpperCase()}</Text>
                         </View>
                         <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-                            <Ionicons name="pencil" size={18} color="#0c831f" />
+                            <Ionicons name="pencil" size={18} color="#0059ff" />
                         </TouchableOpacity>
                     </View>
                     <View style={styles.profileInfoList}>
@@ -214,8 +214,8 @@ export default function SettingsScreen() {
                 <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Management</Text>
                     <TouchableOpacity style={styles.edgeRow} onPress={() => router.push("/additem")}>
-                        <View style={[styles.infoIconWrapper, { backgroundColor: "#e0f2f1" }]}>
-                            <Ionicons name="restaurant-outline" size={20} color="#00695c" />
+                        <View style={[styles.infoIconWrapper, { backgroundColor: "#fff0e6" }]}>
+                            <Ionicons name="restaurant-outline" size={20} color="#ff6600" />
                         </View>
                         <View style={styles.actionTextWrapper}>
                             <Text style={styles.actionLabel}>
@@ -229,8 +229,8 @@ export default function SettingsScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.edgeRow} onPress={() => router.push("/trackrecord")}>
-                        <View style={[styles.infoIconWrapper, { backgroundColor: "#e8eaf6" }]}>
-                            <Ionicons name="analytics-outline" size={20} color="#3f51b5" />
+                        <View style={[styles.infoIconWrapper, { backgroundColor: "#e6f0ff" }]}>
+                            <Ionicons name="analytics-outline" size={20} color="#0059ff" />
                         </View>
                         <View style={styles.actionTextWrapper}>
                             <Text style={styles.actionLabel}>Track Record</Text>
@@ -245,8 +245,8 @@ export default function SettingsScreen() {
                     <Text style={styles.sectionTitle}>General Options</Text>
                     
                     <TouchableOpacity style={styles.edgeRow} onPress={() => router.push("/Appaboutus")}>
-                        <View style={[styles.infoIconWrapper, { backgroundColor: "#fff3e0" }]}>
-                            <Ionicons name="information-circle-outline" size={20} color="#f57c00" />
+                        <View style={[styles.infoIconWrapper, { backgroundColor: "#fff0e6" }]}>
+                            <Ionicons name="information-circle-outline" size={20} color="#ff6600" />
                         </View>
                         <View style={styles.actionTextWrapper}>
                             <Text style={styles.actionLabel}>About Us</Text>
@@ -256,8 +256,8 @@ export default function SettingsScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.edgeRow} onPress={() => router.push("/HelpSupport")}>
-                        <View style={[styles.infoIconWrapper, { backgroundColor: "#e3f2fd" }]}>
-                            <Ionicons name="help-buoy-outline" size={20} color="#1565c0" />
+                        <View style={[styles.infoIconWrapper, { backgroundColor: "#e6f0ff" }]}>
+                            <Ionicons name="help-buoy-outline" size={20} color="#0059ff" />
                         </View>
                         <View style={styles.actionTextWrapper}>
                             <Text style={styles.actionLabel}>Help & Support</Text>
@@ -266,16 +266,19 @@ export default function SettingsScreen() {
                         <Ionicons name="chevron-forward-outline" size={18} color="#999" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.edgeRow} onPress={() => setShowLogoutModal(true)}>
-                        <View style={[styles.infoIconWrapper, { backgroundColor: "#ffebee" }]}>
-                            <Ionicons name="log-out-outline" size={20} color="#d32f2f" />
-                        </View>
-                        <View style={styles.actionTextWrapper}>
-                            <Text style={[styles.actionLabel, { color: "#d32f2f" }]}>Logout</Text>
-                            <Text style={styles.actionSubtitle}>Sign out of your account</Text>
-                        </View>
-                        <Ionicons name="chevron-forward-outline" size={18} color="#d32f2f" />
-                    </TouchableOpacity>
+
+                </View>
+
+                {/* Logout Button */}
+                <TouchableOpacity style={styles.logoutButton} onPress={() => setShowLogoutModal(true)}>
+                    <Ionicons name="log-out-outline" size={22} color="#ff6600" style={{ marginRight: 8 }} />
+                    <Text style={styles.logoutButtonText}>Logout</Text>
+                </TouchableOpacity>
+
+                {/* App Version */}
+                <View style={styles.versionContainer}>
+                    <Text style={styles.versionText}>Vyapar Setu</Text>
+                    <Text style={styles.versionNumber}>Version 1.0.0</Text>
                 </View>
             </ScrollView>
 
@@ -322,7 +325,7 @@ export default function SettingsScreen() {
                 onClose={() => setShowLogoutModal(false)}
                 onConfirm={handleConfirmLogout}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -336,9 +339,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
         paddingHorizontal: 16,
-        paddingTop: Platform.OS === 'android' ? 40 : 10,
+        paddingTop: Platform.OS === 'android' ? 40 : 60,
         paddingBottom: 20,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
         elevation: 4,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
@@ -351,7 +354,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 20,
         fontWeight: "900",
-        color: "#000",
+        color: "#fff",
     },
     scrollContent: {
         paddingVertical: 0,
@@ -371,12 +374,12 @@ const styles = StyleSheet.create({
         width: 54,
         height: 54,
         borderRadius: 27,
-        backgroundColor: "#fffdf0",
+        backgroundColor: "#fff5eb",
         justifyContent: "center",
         alignItems: "center",
         marginRight: 16,
         borderWidth: 1,
-        borderColor: "#ffe082",
+        borderColor: "#ffb380",
     },
     profileDetails: {
         flex: 1,
@@ -389,8 +392,8 @@ const styles = StyleSheet.create({
     categoryBadge: {
         fontSize: 10,
         fontWeight: "800",
-        color: "#f57c00",
-        backgroundColor: "#fff3e0",
+        color: "#ff6600",
+        backgroundColor: "#fff0e6",
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 6,
@@ -444,8 +447,40 @@ const styles = StyleSheet.create({
     },
     editButton: {
         padding: 8,
-        backgroundColor: "#e8f5e9",
+        backgroundColor: "#e6f0ff",
         borderRadius: 20,
+    },
+    logoutButton: {
+        backgroundColor: "rgba(255, 243, 233, 1)",
+        borderWidth: 1.5,
+        borderColor: "#ff6600",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 14,
+        marginHorizontal: 16,
+        borderRadius: 12,
+        marginTop: 40,
+    },
+    logoutButtonText: {
+        color: "#ff6600",
+        fontSize: 16,
+        fontWeight: "800",
+    },
+    versionContainer: {
+        alignItems: "center",
+        marginTop: 24,
+        marginBottom: 40,
+    },
+    versionText: {
+        fontSize: 14,
+        fontWeight: "800",
+        color: "#888",
+    },
+    versionNumber: {
+        fontSize: 12,
+        color: "#aaa",
+        marginTop: 2,
     },
     profileInfoList: {
         marginTop: 16,
@@ -526,7 +561,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 10,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         justifyContent: "center",
         alignItems: "center",
         minWidth: 90,

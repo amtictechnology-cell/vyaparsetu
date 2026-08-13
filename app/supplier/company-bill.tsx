@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useState } from 'react';
 import { BASE_URL } from '../../constants/Config';
@@ -35,8 +35,7 @@ export default function SupplierCompanyBill() {
     const [refreshing, setRefreshing] = useState(false);
 
     // Search filter
-    const [searchName, setSearchName] = useState('');
-    const [searchMobile, setSearchMobile] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Add Modal
     const [addModal, setAddModal] = useState(false);
@@ -94,9 +93,17 @@ export default function SupplierCompanyBill() {
     useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
 
     // ── Search handler ────────────────────────────────────────────────
-    const handleSearch = () => fetchCompanies(false, searchName, searchMobile);
+    const handleSearch = () => {
+        const query = searchQuery.trim();
+        const isNumeric = /^\d+$/.test(query);
+        if (isNumeric) {
+            fetchCompanies(false, '', query);
+        } else {
+            fetchCompanies(false, query, '');
+        }
+    };
     const handleClearSearch = () => {
-        setSearchName(''); setSearchMobile('');
+        setSearchQuery('');
         fetchCompanies();
     };
 
@@ -207,52 +214,34 @@ export default function SupplierCompanyBill() {
         <View style={styles.container}>
 
             {/* ── Top Bar ── */}
-            <View style={[styles.topBar, { paddingTop: Platform.OS === 'android' ? 40 : 20 }]}>
+            <View style={[styles.topBar, { paddingTop: Platform.OS === 'ios' ? 40 : 50 }]}>
                 <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 15 }}>
-                    <Ionicons name="arrow-back" size={28} color="#111" />
+                    <Ionicons name="arrow-back" size={28} color="#fff" />
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
                     <Text style={styles.topTitle}>My Companies</Text>
                     <Text style={styles.topSub}>Apni companies manage karo</Text>
                 </View>
-                <TouchableOpacity style={styles.addBtn} onPress={() => setAddModal(true)} activeOpacity={0.85}>
-                    <Ionicons name="add" size={20} color="#fff" />
-                    <Text style={styles.addBtnText}>Add</Text>
-                </TouchableOpacity>
             </View>
 
             {/* ── Search Bar ── */}
             <View style={styles.searchBar}>
                 <View style={styles.searchInput}>
-                    <Ionicons name="business-outline" size={15} color="#aaa" style={{ marginRight: 6 }} />
+                    <Ionicons name="search-outline" size={18} color="#aaa" style={{ marginRight: 8 }} />
                     <TextInput
                         style={styles.searchText}
-                        placeholder="Company name..."
+                        placeholder="Search company or mobile..."
                         placeholderTextColor="#bbb"
-                        value={searchName}
-                        onChangeText={setSearchName}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
                         returnKeyType="search"
                         onSubmitEditing={handleSearch}
                     />
                 </View>
-                <View style={styles.searchInput}>
-                    <Ionicons name="call-outline" size={15} color="#aaa" style={{ marginRight: 6 }} />
-                    <TextInput
-                        style={styles.searchText}
-                        placeholder="Mobile..."
-                        placeholderTextColor="#bbb"
-                        keyboardType="numeric"
-                        value={searchMobile}
-                        onChangeText={setSearchMobile}
-                        maxLength={10}
-                        returnKeyType="search"
-                        onSubmitEditing={handleSearch}
-                    />
-                </View>
-                <TouchableOpacity style={styles.searchBtn} onPress={handleSearch}>
+                <TouchableOpacity style={[styles.searchBtn, { backgroundColor: '#ff6600' }]} onPress={handleSearch}>
                     <Ionicons name="search" size={17} color="#fff" />
                 </TouchableOpacity>
-                {(searchName || searchMobile) ? (
+                {searchQuery ? (
                     <TouchableOpacity style={styles.clearBtn} onPress={handleClearSearch}>
                         <Ionicons name="close" size={17} color="#d32f2f" />
                     </TouchableOpacity>
@@ -262,7 +251,7 @@ export default function SupplierCompanyBill() {
             {/* ── List ── */}
             {loading ? (
                 <View style={styles.center}>
-                    <ActivityIndicator size="large" color="#0c831f" />
+                    <ActivityIndicator size="large" color="#ff6600" />
                     <Text style={styles.loadingText}>Companies load ho rahi hain...</Text>
                 </View>
             ) : companies.length === 0 ? (
@@ -284,6 +273,11 @@ export default function SupplierCompanyBill() {
                 />
             )}
 
+            {/* ── FAB ── */}
+            <TouchableOpacity style={styles.fab} onPress={() => setAddModal(true)} activeOpacity={0.85}>
+                <Ionicons name="add" size={32} color="#fff" />
+            </TouchableOpacity>
+
             {/* ══ Add Company Modal ══ */}
             <Modal visible={addModal} animationType="slide" transparent onRequestClose={() => setAddModal(false)}>
                 <KeyboardAvoidingView
@@ -295,8 +289,8 @@ export default function SupplierCompanyBill() {
                         <View style={styles.handleBar} />
 
                         <View style={styles.modalTitleRow}>
-                            <View style={[styles.modalIconBox, { backgroundColor: '#e8f5e9' }]}>
-                                <Ionicons name="business-outline" size={20} color="#0c831f" />
+                            <View style={[styles.modalIconBox, { backgroundColor: '#fff5eb' }]}>
+                                <Ionicons name="business-outline" size={20} color="#ff6600" />
                             </View>
                             <Text style={styles.modalTitle}>New Company Add Karo</Text>
                             <TouchableOpacity onPress={() => setAddModal(false)} disabled={adding}
@@ -307,7 +301,7 @@ export default function SupplierCompanyBill() {
 
                         <Text style={styles.inputLabel}>Company Name</Text>
                         <View style={styles.inputBox}>
-                            <Ionicons name="business-outline" size={16} color="#0c831f" style={{ marginRight: 8 }} />
+                            <Ionicons name="business-outline" size={16} color="#ff6600" style={{ marginRight: 8 }} />
                             <TextInput
                                 style={styles.modalInput}
                                 placeholder="e.g. Sharma Traders"
@@ -320,7 +314,7 @@ export default function SupplierCompanyBill() {
 
                         <Text style={styles.inputLabel}>Mobile Number</Text>
                         <View style={styles.inputBox}>
-                            <Ionicons name="call-outline" size={16} color="#0c831f" style={{ marginRight: 8 }} />
+                            <Ionicons name="call-outline" size={16} color="#ff6600" style={{ marginRight: 8 }} />
                             <TextInput
                                 style={styles.modalInput}
                                 placeholder="10-digit number"
@@ -414,7 +408,7 @@ export default function SupplierCompanyBill() {
                                 onPress={() => setEditStatus('active')}
                             >
                                 <Ionicons name="checkmark-circle-outline" size={16}
-                                    color={editStatus === 'active' ? '#fff' : '#0c831f'} />
+                                    color={editStatus === 'active' ? '#fff' : '#ff6600'} />
                                 <Text style={[styles.statusBtnText, editStatus === 'active' && styles.statusBtnTextActive]}>
                                     Active
                                 </Text>
@@ -458,19 +452,19 @@ const styles = StyleSheet.create({
     /* Top Bar */
     topBar: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 14,
-        borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-        elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4,
+        backgroundColor: '#ff6600', paddingHorizontal: 16, paddingVertical: 14,
+        borderBottomWidth: 1, borderBottomColor: '#ff6600',
+        elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4,
     },
-    topTitle: { fontSize: 18, fontWeight: '900', color: '#111' },
-    topSub: { fontSize: 12, color: '#888', marginTop: 2 },
-    addBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 5,
-        backgroundColor: '#0c831f', paddingHorizontal: 16, paddingVertical: 10,
-        borderRadius: 12, elevation: 4, shadowColor: '#0c831f',
-        shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 6,
+    topTitle: { fontSize: 18, fontWeight: '900', color: '#fff' },
+    topSub: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+    
+    /* FAB */
+    fab: {
+        position: 'absolute', bottom: 25, right: 25, width: 60, height: 60, borderRadius: 30,
+        backgroundColor: '#ff6600', justifyContent: 'center', alignItems: 'center',
+        elevation: 8, shadowColor: '#ff6600', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8,
     },
-    addBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
 
     /* Search */
     searchBar: {
@@ -485,7 +479,7 @@ const styles = StyleSheet.create({
     },
     searchText: { flex: 1, fontSize: 13, color: '#333', fontWeight: '600' },
     searchBtn: {
-        width: 38, height: 38, borderRadius: 10, backgroundColor: '#0c831f',
+        width: 38, height: 38, borderRadius: 10, backgroundColor: '#ff6600',
         justifyContent: 'center', alignItems: 'center',
     },
     clearBtn: {
@@ -505,20 +499,20 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 14,
     },
     companyAvatar: {
-        width: 46, height: 46, borderRadius: 14, backgroundColor: '#e8f5e9',
+        width: 46, height: 46, borderRadius: 14, backgroundColor: '#fff5eb',
         justifyContent: 'center', alignItems: 'center', marginRight: 12,
     },
-    companyAvatarText: { fontSize: 20, fontWeight: '900', color: '#0c831f' },
+    companyAvatarText: { fontSize: 20, fontWeight: '900', color: '#ff6600' },
     companyInfo: { flex: 1 },
     companyName: { fontSize: 15, fontWeight: '800', color: '#111' },
     companyMobileRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
     companyMobile: { fontSize: 13, color: '#888', fontWeight: '600' },
     companyRight: { alignItems: 'flex-end', gap: 8 },
     statusPill: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
-    pillActive: { backgroundColor: '#e8f5e9' },
+    pillActive: { backgroundColor: '#fff5eb' },
     pillInactive: { backgroundColor: '#f5f5f5' },
     pillText: { fontSize: 11, fontWeight: '800' },
-    pillTextActive: { color: '#0c831f' },
+    pillTextActive: { color: '#ff6600' },
     pillTextInactive: { color: '#999' },
     editBtn: {
         width: 32, height: 32, borderRadius: 9, backgroundColor: '#e3f2fd',
@@ -556,7 +550,7 @@ const styles = StyleSheet.create({
         flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
         paddingVertical: 11, borderRadius: 12, borderWidth: 1.5, borderColor: '#e0e0e0', backgroundColor: '#fafafa',
     },
-    statusBtnActive: { backgroundColor: '#0c831f', borderColor: '#0c831f' },
+    statusBtnActive: { backgroundColor: '#ff6600', borderColor: '#ff6600' },
     statusBtnInactive: { backgroundColor: '#888', borderColor: '#888' },
     statusBtnText: { fontSize: 13, fontWeight: '800', color: '#666' },
     statusBtnTextActive: { color: '#fff' },
@@ -570,9 +564,11 @@ const styles = StyleSheet.create({
     modalCancelText: { fontSize: 14, fontWeight: '700', color: '#777' },
     modalSaveBtn: {
         flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-        paddingVertical: 14, borderRadius: 14, backgroundColor: '#0c831f',
-        elevation: 5, shadowColor: '#0c831f', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8,
+        paddingVertical: 14, borderRadius: 14, backgroundColor: '#ff6600',
+        elevation: 5, shadowColor: '#ff6600', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8,
     },
     modalSaveText: { fontSize: 14, fontWeight: '800', color: '#fff' },
 });
+
+
 

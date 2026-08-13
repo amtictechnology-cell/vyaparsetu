@@ -1,10 +1,7 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { BASE_URL } from "../constants/Config";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,67 +12,26 @@ import {
   View,
 } from "react-native";
 
-const CATEGORIES = ["Hotel", "Shop", "Supplier", "Printing", "Builder"];
-
 export default function InformationScreen() {
   const [name, setName] = useState("");
   const [businessName, setBusinessName] = useState("");
-  const [category, setCategory] = useState("");
   const router = useRouter();
   const { userId } = useLocalSearchParams<{ userId?: string }>();
 
-  const handleStart = async () => {
-    if (name && businessName && category) {
-      try {
-        const apiCategory = category.toLowerCase() === "supplier" ? "supplier" : category.toLowerCase();
-
-        const response = await fetch(`${BASE_URL}/user/complete-profile`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: userId || "",
-            businessCategory: apiCategory,
-            name,
-            businessName
-          }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          if (data?.token) {
-            await AsyncStorage.setItem("userToken", data.token);
-          }
-          const finalCategory = (data?.user?.businessCategory || apiCategory).toLowerCase();
-          const isSubscribed = await AsyncStorage.getItem("isSubscribed");
-          if (isSubscribed === "true") {
-            if (finalCategory === "shop") {
-              router.replace("/Shop" as any);
-            } else if (finalCategory === "supplier" || finalCategory === "suppliers") {
-              router.replace("/supplier" as any);
-            } else if (finalCategory === "printing") {
-              router.replace("/printing" as any);
-            } else if (finalCategory === "builder") {
-              router.replace("/builder" as any);
-            } else {
-              router.replace("/home" as any);
-            }
-          } else {
-            router.replace("/plans" as any);
-          }
-        } else {
-          Alert.alert("Error", data.message || "Failed to complete profile");
+  const handleContinue = () => {
+    if (name.trim() && businessName.trim()) {
+      router.push({
+        pathname: "/category-select",
+        params: {
+          userId: userId || "",
+          name: name.trim(),
+          businessName: businessName.trim()
         }
-      } catch (error) {
-        console.error("Profile completion error:", error);
-        Alert.alert("Error", "Network error. Please try again later.");
-      }
+      });
     }
   };
 
-  const isFormValid = name.trim() && businessName.trim() && category;
+  const isFormValid = name.trim() && businessName.trim();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -85,7 +41,7 @@ export default function InformationScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <Text style={styles.title}>Complete Your Profile</Text>
+            <Text style={styles.title}>Complete Your <Text style={{ color: "#ff6600" }}>Profile</Text></Text>
             <Text style={styles.subtitle}>Help us set up your business account</Text>
           </View>
 
@@ -93,7 +49,7 @@ export default function InformationScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Your Name</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, name.trim().length > 0 && { borderColor: "#ff6600" }]}
                 placeholder="Enter your full name"
                 placeholderTextColor="#999"
                 value={name}
@@ -104,7 +60,7 @@ export default function InformationScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Business Name</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, businessName.trim().length > 0 && { borderColor: "#ff6600" }]}
                 placeholder="Enter business name"
                 placeholderTextColor="#999"
                 value={businessName}
@@ -112,40 +68,15 @@ export default function InformationScreen() {
               />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Business Category</Text>
-              <View style={styles.categoryContainer}>
-                {CATEGORIES.map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    style={[
-                      styles.categoryChip,
-                      category === item && styles.categoryChipActive,
-                    ]}
-                    onPress={() => setCategory(item)}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryText,
-                        category === item && styles.categoryTextActive,
-                      ]}
-                    >
-                      {item}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
             <TouchableOpacity
               style={[
                 styles.button,
                 isFormValid ? styles.buttonActive : styles.buttonDisabled,
               ]}
-              onPress={handleStart}
+              onPress={handleContinue}
               disabled={!isFormValid}
             >
-              <Text style={styles.buttonText}>Save & Start Exploring</Text>
+              <Text style={styles.buttonText}>Continue</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -202,35 +133,6 @@ const styles = StyleSheet.create({
     color: "#000",
     backgroundColor: "#fcfcfc",
   },
-  categoryContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 4,
-  },
-  categoryChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#eee",
-    backgroundColor: "#fff",
-    minWidth: "30%",
-    flexGrow: 1,
-    alignItems: "center",
-  },
-  categoryChipActive: {
-    backgroundColor: "#0c831f",
-    borderColor: "#0c831f",
-  },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#666",
-  },
-  categoryTextActive: {
-    color: "#fff",
-  },
   button: {
     height: 58,
     borderRadius: 14,
@@ -244,7 +146,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   buttonActive: {
-    backgroundColor: "#0c831f",
+    backgroundColor: "#ff6600",
   },
   buttonDisabled: {
     backgroundColor: "#ccc",
@@ -255,4 +157,3 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 });
-

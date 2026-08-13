@@ -1,4 +1,4 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+﻿import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
 import { SERVER_URL } from '../../constants/Config';
 import {
@@ -100,7 +100,7 @@ export default function SupplierScreen() {
     const headerBorderRadius = hasVideo ? 0 : 30;
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['right', 'bottom', 'left']}>
             <StatusBar barStyle={isCustomHeader ? "light-content" : "dark-content"} backgroundColor={headerBgColor} />
             
             {/* Header Part 1: Branding Header */}
@@ -325,4 +325,5 @@ const styles = StyleSheet.create({
         lineHeight: 16,
     },
 });
+
 

@@ -1,7 +1,7 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
 import { SERVER_URL } from '../constants/Config';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, StatusBar, Animated, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, StatusBar, Animated, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -87,7 +87,7 @@ export default function BuilderScreen() {
 
     if (loading) {
         return (
-            <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+            <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]} edges={['bottom', 'left', 'right']}>
                 <ActivityIndicator size="large" color="#0c831f" />
             </SafeAreaView>
         );
@@ -105,7 +105,7 @@ export default function BuilderScreen() {
     const headerBorderRadius = hasVideo ? 0 : 30;
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
             <StatusBar barStyle={isCustomHeader ? "light-content" : "dark-content"} backgroundColor={headerBgColor} />
             
             {/* Header Part 1: Branding Header */}
@@ -156,13 +156,41 @@ export default function BuilderScreen() {
                     />
                 </View>
             ) : null}
-            <View style={styles.content}>
-                <Ionicons name="construct-outline" size={80} color="#0c831f" />
-                <Text style={styles.message}>{"This component opened because you selected 'Builder' as your business category."}</Text>
-                <TouchableOpacity style={styles.button} onPress={() => router.replace('/signup')}>
-                    <Text style={styles.buttonText}>Go to Signup</Text>
-                </TouchableOpacity>
-            </View>
+            <ScrollView contentContainerStyle={styles.content}>
+                <View style={styles.dashboardGrid}>
+                    <TouchableOpacity 
+                        style={styles.card} 
+                        onPress={() => router.push('/builder/clients' as any)}
+                    >
+                        <View style={styles.cardIconContainer}>
+                            <Ionicons name="people-outline" size={32} color="#ff6600" />
+                        </View>
+                        <Text style={styles.cardTitle}>Clients</Text>
+                        <Text style={styles.cardSubtitle}>Manage your clients</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        style={styles.card} 
+                        onPress={() => router.push('/builder/rate-list' as any)}
+                    >
+                        <View style={styles.cardIconContainer}>
+                            <Ionicons name="list-outline" size={32} color="#ff6600" />
+                        </View>
+                        <Text style={styles.cardTitle}>Work Rate List</Text>
+                        <Text style={styles.cardSubtitle}>Manage service prices</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={styles.card} 
+                        onPress={() => router.push('/builder/masons' as any)}
+                    >
+                        <View style={styles.cardIconContainer}>
+                            <Ionicons name="hammer-outline" size={32} color="#ff6600" />
+                        </View>
+                        <Text style={styles.cardTitle}>Masons</Text>
+                        <Text style={styles.cardSubtitle}>Manage workers & attendance</Text>
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
 
             <LogoutModal
                 visible={showLogoutModal}
@@ -224,8 +252,30 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
     },
-    content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-    message: { fontSize: 16, textAlign: 'center', marginVertical: 20, color: '#444' },
-    button: { backgroundColor: '#0c831f', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 },
-    buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+    content: { padding: 20 },
+    dashboardGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+    card: { 
+        width: '48%', 
+        backgroundColor: '#fff', 
+        borderRadius: 16, 
+        padding: 16, 
+        marginBottom: 16,
+        elevation: 4, 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: 2 }, 
+        shadowOpacity: 0.1, 
+        shadowRadius: 6,
+        alignItems: 'center'
+    },
+    cardIconContainer: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#fff3e0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12
+    },
+    cardTitle: { fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 4 },
+    cardSubtitle: { fontSize: 12, color: '#666', textAlign: 'center' }
 });

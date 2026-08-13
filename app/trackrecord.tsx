@@ -136,8 +136,8 @@ export default function TrackRecordScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffb703" />
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
             {/* Header */}
             <View style={styles.header}>
@@ -205,7 +205,7 @@ export default function TrackRecordScreen() {
                                     style={styles.dateSelector} 
                                     onPress={() => setShowFromPicker(true)}
                                 >
-                                    <Ionicons name="calendar-outline" size={18} color="#00695c" style={styles.dateIcon} />
+                                    <Ionicons name="calendar-outline" size={18} color="#0059ff" style={styles.dateIcon} />
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.dateLabel}>From Date</Text>
                                         <Text style={styles.dateValue}>{formatDateString(fromDate)}</Text>
@@ -216,7 +216,7 @@ export default function TrackRecordScreen() {
                                     style={styles.dateSelector} 
                                     onPress={() => setShowToPicker(true)}
                                 >
-                                    <Ionicons name="calendar-outline" size={18} color="#00695c" style={styles.dateIcon} />
+                                    <Ionicons name="calendar-outline" size={18} color="#0059ff" style={styles.dateIcon} />
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.dateLabel}>To Date</Text>
                                         <Text style={styles.dateValue}>{formatDateString(toDate)}</Text>
@@ -255,49 +255,40 @@ export default function TrackRecordScreen() {
                     
                     {loading ? (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#0c831f" />
+                            <ActivityIndicator size="large" color="#ff6600" />
                             <Text style={styles.loadingText}>Fetching record...</Text>
                         </View>
                     ) : (
                         <View style={styles.cardsContainer}>
                             {/* Room Bookings Stat Card */}
-                            <View style={[styles.card, styles.roomCard]}>
-                                <View style={styles.cardHeaderRow}>
-                                    <View style={[styles.cardIconContainer, { backgroundColor: "#e3f2fd" }]}>
-                                        <Ionicons name="bed-outline" size={24} color="#1565c0" />
-                                    </View>
-                                    <Text style={styles.cardTitle}>Room Bookings</Text>
+                            <View style={styles.card}>
+                                <View style={styles.cardIconContainer}>
+                                    <Ionicons name="bed" size={36} color="#e5a910" />
                                 </View>
                                 <View style={styles.cardBody}>
-                                    <Text style={styles.cardValue}>{bookingsCount}</Text>
+                                    <Text style={styles.cardTitle}>{bookingsCount} Bookings</Text>
                                     <Text style={styles.cardSubtitle}>Total Booked Rooms</Text>
                                 </View>
                             </View>
 
                             {/* Billing Stat Card */}
-                            <View style={[styles.card, styles.billingCard]}>
-                                <View style={styles.cardHeaderRow}>
-                                    <View style={[styles.cardIconContainer, { backgroundColor: "#e8f5e9" }]}>
-                                        <Ionicons name="receipt-outline" size={24} color="#2e7d32" />
-                                    </View>
-                                    <Text style={styles.cardTitle}>Total Billing</Text>
+                            <View style={styles.card}>
+                                <View style={styles.cardIconContainer}>
+                                    <Ionicons name="receipt" size={36} color="#e5a910" />
                                 </View>
                                 <View style={styles.cardBody}>
-                                    <Text style={styles.cardValue}>₹{totalBillingAmount.toLocaleString("en-IN")}</Text>
+                                    <Text style={styles.cardTitle}>₹{totalBillingAmount.toLocaleString("en-IN")} Billing</Text>
                                     <Text style={styles.cardSubtitle}>{billsCount} Bills Generated</Text>
                                 </View>
                             </View>
 
                             {/* Pending Billing Stat Card */}
-                            <View style={[styles.card, styles.pendingCard]}>
-                                <View style={styles.cardHeaderRow}>
-                                    <View style={[styles.cardIconContainer, { backgroundColor: "#fff3e0" }]}>
-                                        <Ionicons name="time-outline" size={24} color="#e65100" />
-                                    </View>
-                                    <Text style={styles.cardTitle}>Pending Billing</Text>
+                            <View style={styles.card}>
+                                <View style={styles.cardIconContainer}>
+                                    <Ionicons name="time" size={36} color="#e5a910" />
                                 </View>
                                 <View style={styles.cardBody}>
-                                    <Text style={styles.cardValue}>₹{pendingBillingAmount.toLocaleString("en-IN")}</Text>
+                                    <Text style={styles.cardTitle}>₹{pendingBillingAmount.toLocaleString("en-IN")} Pending</Text>
                                     <Text style={styles.cardSubtitle}>Outstanding Pending Amount</Text>
                                 </View>
                             </View>
@@ -305,7 +296,7 @@ export default function TrackRecordScreen() {
                     )}
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -319,9 +310,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
         paddingHorizontal: 16,
-        paddingTop: Platform.OS === 'android' ? 40 : 10,
+        paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 40) + 10 : 50,
         paddingBottom: 20,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
         elevation: 4,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
@@ -337,7 +328,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 20,
         fontWeight: "900",
-        color: "#000",
+        color: "#fff",
     },
     scrollContent: {
         paddingVertical: 20,
@@ -383,7 +374,7 @@ const styles = StyleSheet.create({
         color: "#666",
     },
     activeFilterButtonText: {
-        color: "#0c831f",
+        color: "#0059ff",
         fontWeight: "800",
     },
     calendarContainer: {
@@ -446,59 +437,42 @@ const styles = StyleSheet.create({
         flexDirection: "column",
     },
     card: {
-        borderRadius: 18,
-        padding: 20,
-        marginBottom: 16,
-        borderWidth: 1.5,
-        elevation: 2,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-    },
-    roomCard: {
-        backgroundColor: "#f0f7ff",
-        borderColor: "#d0e3ff",
-    },
-    billingCard: {
-        backgroundColor: "#f0faf0",
-        borderColor: "#d2ebd2",
-    },
-    pendingCard: {
-        backgroundColor: "#fff6f0",
-        borderColor: "#ffe0cc",
-    },
-    cardHeaderRow: {
         flexDirection: "row",
         alignItems: "center",
+        backgroundColor: "#fff6de",
+        borderRadius: 20,
+        padding: 16,
         marginBottom: 16,
     },
     cardIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
+        width: 64,
+        height: 64,
+        backgroundColor: "#fff",
+        borderRadius: 18,
         justifyContent: "center",
         alignItems: "center",
-        marginRight: 12,
-    },
-    cardTitle: {
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#444",
+        marginRight: 16,
+        elevation: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
     },
     cardBody: {
-        alignItems: "flex-start",
+        flex: 1,
+        justifyContent: "center",
     },
-    cardValue: {
-        fontSize: 34,
+    cardTitle: {
+        fontSize: 19,
         fontWeight: "900",
-        color: "#111",
+        color: "#333",
+        marginBottom: 4,
     },
     cardSubtitle: {
-        fontSize: 12,
-        fontWeight: "600",
+        fontSize: 14,
+        fontWeight: "500",
         color: "#666",
-        marginTop: 2,
+        lineHeight: 20,
     },
 });
 

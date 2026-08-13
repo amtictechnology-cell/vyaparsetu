@@ -1,4 +1,3 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -6,67 +5,45 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     Platform,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
     ScrollView
 } from 'react-native';
 import { BASE_URL } from '../../constants/Config';
 
-interface BillItem {
-    _id: string;
-    itemId: string;
-    itemName: string;
-    quantity: number;
-    price: number;
-    amount: number;
-}
-
-interface Bill {
-    _id: string;
-    supplierId: string;
-    customerId: string;
-    customerSR: string;
-    customerName: string;
-    mobileNumber: string;
-    shopName: string;
-    billNumber: string;
-    items: BillItem[];
-    grandTotal: number;
-    paymentStatus: string;
-    notes?: string;
-    createdAt: string;
-    updatedAt: string;
+interface BillSummary {
+    totalAmount: number;
+    totalBills: number;
+    date: string; // e.g. "2026-08-01"
+    customerCount: number;
 }
 
 export default function AllBillsScreen() {
     const router = useRouter();
     
-    const [bills, setBills] = useState<Bill[]>([]);
+    const [summaries, setSummaries] = useState<BillSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    
+
     // Filters
     const [dateFilter, setDateFilter] = useState<'today' | 'yesterday' | 'custom' | ''>('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
     
     // Date Picker States
     const [showPicker, setShowPicker] = useState(false);
     const [dateValue, setDateValue] = useState(new Date());
 
-    const fetchBills = useCallback(async (isRefresh = false, activeDateFilter = dateFilter, start = startDate, end = endDate, search = searchQuery) => {
+    const fetchSummaries = useCallback(async (isRefresh = false, activeDateFilter = dateFilter, start = startDate, end = endDate) => {
         try {
             if (isRefresh) setRefreshing(true); else setLoading(true);
             const token = await AsyncStorage.getItem('userToken');
             
-            let url = `${BASE_URL}/supplier/customer-bill`;
+            let url = `${BASE_URL}/supplier/customer-bill-summary`;
             const params = [];
             
             if (activeDateFilter === 'today' || activeDateFilter === 'yesterday') {
@@ -76,14 +53,6 @@ export default function AllBillsScreen() {
                 params.push(`endDate=${end}`);
             }
             
-            if (search.trim()) {
-                if (search.toUpperCase().includes('BILL')) {
-                    params.push(`billNumber=${encodeURIComponent(search.trim())}`);
-                } else {
-                    params.push(`customerName=${encodeURIComponent(search.trim())}`);
-                }
-            }
-
             if (params.length > 0) {
                 url += `?${params.join('&')}`;
             }
@@ -94,24 +63,22 @@ export default function AllBillsScreen() {
             const data = await res.json();
             
             if (res.ok && data.success && data.data) {
-                setBills(data.data);
+                setSummaries(data.data);
             } else {
-                setBills([]);
+                setSummaries([]);
             }
         } catch (e) {
-            console.error('Fetch bills error:', e);
-            setBills([]);
+            console.error('Fetch summaries error:', e);
+            setSummaries([]);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [dateFilter, startDate, endDate, searchQuery]);
+    }, [dateFilter, startDate, endDate]);
 
     useEffect(() => {
-        // Default filter to today
-        setDateFilter('today');
-        fetchBills(false, 'today', '', '', '');
-    }, []);
+        fetchSummaries();
+    }, [fetchSummaries]);
 
     const handleDateChange = (event: any, selectedDate?: Date) => {
         setShowPicker(Platform.OS === 'ios');
@@ -125,164 +92,119 @@ export default function AllBillsScreen() {
             
             setDateFilter('custom');
             setStartDate(formattedDate);
-            setEndDate(formattedDate); // Single day selection
-            fetchBills(false, 'custom', formattedDate, formattedDate, searchQuery);
+            setEndDate(formattedDate);
+            fetchSummaries(false, 'custom', formattedDate, formattedDate);
         }
-    };
-
-    const handleSearch = () => {
-        fetchBills(false, dateFilter, startDate, endDate, searchQuery);
-    };
-
-    const clearSearch = () => {
-        setSearchQuery('');
-        fetchBills(false, dateFilter, startDate, endDate, '');
     };
 
     const setQuickFilter = (filter: 'today' | 'yesterday' | '') => {
         setDateFilter(filter);
         setStartDate('');
         setEndDate('');
-        fetchBills(false, filter, '', '', searchQuery);
+        fetchSummaries(false, filter, '', '');
     };
 
     const formatDateStr = (dateString: string) => {
         const d = new Date(dateString);
-        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
-    const renderBill = ({ item }: { item: Bill }) => (
-        <View style={styles.billCard}>
-            <View style={styles.billHeader}>
-                <Text style={styles.billNumber}>{item.billNumber}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: item.paymentStatus === 'done' ? '#e8f5e9' : '#fff3e0' }]}>
-                    <Text style={[styles.statusText, { color: item.paymentStatus === 'done' ? '#2e7d32' : '#e65100' }]}>
-                        {item.paymentStatus === 'done' ? 'PAID' : 'PENDING'}
-                    </Text>
+    const renderSummary = ({ item }: { item: BillSummary }) => (
+        <View style={styles.summaryCard}>
+            <View style={styles.cardHeader}>
+                <View style={styles.dateBadge}>
+                    <Ionicons name="calendar" size={14} color="#ff6600" style={{ marginRight: 6 }} />
+                    <Text style={styles.dateText}>{formatDateStr(item.date)}</Text>
                 </View>
+                <Text style={styles.amountText}>₹{item.totalAmount.toLocaleString('en-IN')}</Text>
             </View>
-            <View style={styles.billInfo}>
-                <Text style={styles.customerName}>{item.customerName || 'Unknown Customer'}</Text>
-                <Text style={styles.dateText}>{formatDateStr(item.createdAt)}</Text>
-            </View>
-            <View style={styles.billFooter}>
-                <Text style={styles.itemsText}>{item.items?.length || 0} items</Text>
-                <Text style={styles.amountText}>₹{item.grandTotal || 0}</Text>
+            <View style={styles.cardBody}>
+                <View style={styles.statBox}>
+                    <Text style={styles.statLabel}>Total Bills</Text>
+                    <Text style={styles.statValue}>{item.totalBills}</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statBox}>
+                    <Text style={styles.statLabel}>Customers</Text>
+                    <Text style={styles.statValue}>{item.customerCount}</Text>
+                </View>
             </View>
         </View>
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Header Section */}
-            <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 40 : 20 }]}>
-                <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 15 }}>
-                    <Ionicons name="arrow-back" size={28} color="#111" />
+        <View style={styles.container}>
+            {/* Full Bleed Orange Header */}
+            <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? 50 : 40 }]}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                    <Ionicons name="arrow-back" size={28} color="#fff" />
                 </TouchableOpacity>
-                <View style={{ flex: 1 }}>
-                    <Text style={styles.headerTitle}>Customer Bills</Text>
-                    <Text style={styles.headerSub}>View generated bills</Text>
-                </View>
+                <Text style={styles.headerTitle}>Bill Summary</Text>
+                <View style={{ width: 36 }} />
             </View>
 
-            {/* Filters Section */}
+            {/* Date Filters */}
             <View style={styles.filtersContainer}>
-                {/* Search Bar */}
-                <View style={styles.searchBar}>
-                    <Ionicons name="search" size={18} color="#999" />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search customer or bill no..."
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        returnKeyType="search"
-                        onSubmitEditing={handleSearch}
-                    />
-                    {searchQuery !== '' && (
-                        <TouchableOpacity onPress={clearSearch}>
-                            <Ionicons name="close-circle" size={18} color="#999" />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                    <TouchableOpacity 
+                        style={[styles.filterPill, dateFilter === 'today' && styles.filterPillActive]}
+                        onPress={() => setQuickFilter('today')}
+                    >
+                        <Text style={[styles.filterPillText, dateFilter === 'today' && styles.filterPillTextActive]}>Today</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        style={[styles.filterPill, dateFilter === 'yesterday' && styles.filterPillActive]}
+                        onPress={() => setQuickFilter('yesterday')}
+                    >
+                        <Text style={[styles.filterPillText, dateFilter === 'yesterday' && styles.filterPillTextActive]}>Yesterday</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        style={[styles.filterPill, dateFilter === 'custom' && styles.filterPillActive]}
+                        onPress={() => setShowPicker(true)}
+                    >
+                        <Ionicons name="calendar-outline" size={14} color={dateFilter === 'custom' ? '#fff' : '#666'} style={{ marginRight: 4 }} />
+                        <Text style={[styles.filterPillText, dateFilter === 'custom' && styles.filterPillTextActive]}>
+                            {dateFilter === 'custom' && startDate ? startDate : 'Select Date'}
+                        </Text>
+                    </TouchableOpacity>
+                    
+                    {(dateFilter !== '') && (
+                        <TouchableOpacity 
+                            style={[styles.filterPill, { backgroundColor: '#ffebee', borderColor: '#ffcdd2' }]}
+                            onPress={() => setQuickFilter('')}
+                        >
+                            <Text style={[styles.filterPillText, { color: '#d32f2f' }]}>Clear</Text>
                         </TouchableOpacity>
                     )}
-                </View>
-
-                {/* Date Filters */}
-                <View style={styles.dateFilters}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-                        <TouchableOpacity 
-                            style={[styles.filterPill, dateFilter === 'today' && styles.filterPillActive]}
-                            onPress={() => setQuickFilter('today')}
-                        >
-                            <Text style={[styles.filterPillText, dateFilter === 'today' && styles.filterPillTextActive]}>Today</Text>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity 
-                            style={[styles.filterPill, dateFilter === 'yesterday' && styles.filterPillActive]}
-                            onPress={() => setQuickFilter('yesterday')}
-                        >
-                            <Text style={[styles.filterPillText, dateFilter === 'yesterday' && styles.filterPillTextActive]}>Yesterday</Text>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity 
-                            style={[styles.filterPill, dateFilter === 'custom' && styles.filterPillActive]}
-                            onPress={() => setShowPicker(true)}
-                        >
-                            <Ionicons name="calendar-outline" size={14} color={dateFilter === 'custom' ? '#fff' : '#666'} style={{ marginRight: 4 }} />
-                            <Text style={[styles.filterPillText, dateFilter === 'custom' && styles.filterPillTextActive]}>
-                                {dateFilter === 'custom' && startDate ? startDate : 'Select Date'}
-                            </Text>
-                        </TouchableOpacity>
-                        
-                        {(dateFilter !== '') && (
-                            <TouchableOpacity 
-                                style={[styles.filterPill, { backgroundColor: '#ffebee', borderColor: '#ffcdd2' }]}
-                                onPress={() => setQuickFilter('')}
-                            >
-                                <Text style={[styles.filterPillText, { color: '#d32f2f' }]}>Clear</Text>
-                            </TouchableOpacity>
-                        )}
-                    </ScrollView>
-                </View>
+                </ScrollView>
             </View>
 
             {/* List Section */}
             {loading && !refreshing ? (
                 <View style={styles.centerContainer}>
-                    <ActivityIndicator size="large" color="#0c831f" />
+                    <ActivityIndicator size="large" color="#ff6600" />
                 </View>
             ) : (
-                <>
-                    {bills.length > 0 && (
-                        <View style={styles.summaryCard}>
-                            <Text style={styles.summaryTitle}>
-                                {dateFilter === 'today' ? "Today's Total Billing" : 
-                                 dateFilter === 'yesterday' ? "Yesterday's Total Billing" : 
-                                 "Total Billing Amount"}
-                            </Text>
-                            <Text style={styles.summaryAmount}>
-                                ₹{bills.reduce((sum, bill) => sum + (bill.grandTotal || 0), 0)}
-                            </Text>
+                <FlatList
+                    data={summaries}
+                    keyExtractor={(item, index) => item.date + index}
+                    renderItem={renderSummary}
+                    contentContainerStyle={styles.listContainer}
+                    showsVerticalScrollIndicator={false}
+                    onRefresh={() => fetchSummaries(true)}
+                    refreshing={refreshing}
+                    ListEmptyComponent={
+                        <View style={styles.centerContainer}>
+                            <Ionicons name="document-text-outline" size={60} color="#ddd" />
+                            <Text style={styles.emptyText}>No summaries found</Text>
                         </View>
-                    )}
-                    <FlatList
-                        data={bills}
-                        keyExtractor={(item) => item._id}
-                        renderItem={renderBill}
-                        contentContainerStyle={styles.listContainer}
-                        showsVerticalScrollIndicator={false}
-                        onRefresh={() => fetchBills(true)}
-                        refreshing={refreshing}
-                        ListEmptyComponent={
-                            <View style={styles.centerContainer}>
-                                <Ionicons name="receipt-outline" size={60} color="#ddd" />
-                                <Text style={styles.emptyText}>No bills found</Text>
-                                <Text style={styles.emptySubText}>Try changing the date or search filters.</Text>
-                            </View>
-                        }
-                    />
-                </>
+                    }
+                />
             )}
 
-            {/* Date Picker Modal (Android overlay / iOS popup) */}
+            {/* Date Picker */}
             {showPicker && (
                 <DateTimePicker
                     value={dateValue}
@@ -291,52 +213,35 @@ export default function AllBillsScreen() {
                     onChange={handleDateChange}
                 />
             )}
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f4f6f9' },
+    container: { flex: 1, backgroundColor: '#f6f9f6' },
     
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        paddingHorizontal: 20,
-        paddingBottom: 15,
-        elevation: 2,
+    header: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        paddingHorizontal: 20, 
+        paddingBottom: 15, 
+        backgroundColor: '#ff6600',
+        elevation: 4,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        zIndex: 10,
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        zIndex: 10
     },
-    headerTitle: { fontSize: 20, fontWeight: '800', color: '#111' },
-    headerSub: { fontSize: 12, color: '#777', fontWeight: '600' },
+    headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
+    backBtn: { padding: 4 },
     
     filtersContainer: {
         backgroundColor: '#fff',
         padding: 15,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
-    },
-    searchBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f1f3f5',
-        borderRadius: 12,
-        paddingHorizontal: 15,
-        height: 44,
-        marginBottom: 12,
-    },
-    searchInput: {
-        flex: 1,
-        marginLeft: 8,
-        fontSize: 14,
-        color: '#333',
-    },
-    dateFilters: {
-        flexDirection: 'row',
     },
     filterPill: {
         flexDirection: 'row',
@@ -349,8 +254,8 @@ const styles = StyleSheet.create({
         borderColor: '#e9ecef',
     },
     filterPillActive: {
-        backgroundColor: '#0c831f',
-        borderColor: '#0c831f',
+        backgroundColor: '#ff6600',
+        borderColor: '#ff6600',
     },
     filterPillText: {
         fontSize: 13,
@@ -365,95 +270,70 @@ const styles = StyleSheet.create({
         padding: 15,
         paddingBottom: 100,
     },
+    
     summaryCard: {
-        backgroundColor: '#e8f5e9',
-        marginHorizontal: 15,
-        marginTop: 15,
+        backgroundColor: '#fff',
+        borderRadius: 16,
         padding: 15,
-        borderRadius: 12,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#c8e6c9',
+        marginBottom: 15,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
     },
-    summaryTitle: {
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    dateBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff5eb',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ffe0b2'
+    },
+    dateText: {
         fontSize: 14,
-        color: '#2e7d32',
+        fontWeight: '700',
+        color: '#ff6600',
+    },
+    amountText: {
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#111',
+    },
+    cardBody: {
+        flexDirection: 'row',
+        backgroundColor: '#fafafa',
+        borderRadius: 12,
+        padding: 15,
+        alignItems: 'center',
+    },
+    statBox: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    statDivider: {
+        width: 1,
+        height: '100%',
+        backgroundColor: '#eee',
+    },
+    statLabel: {
+        fontSize: 12,
+        color: '#888',
         fontWeight: '600',
         marginBottom: 4,
     },
-    summaryAmount: {
-        fontSize: 24,
-        fontWeight: '800',
-        color: '#1b5e20',
-    },
-    billCard: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 15,
-        marginBottom: 12,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        borderWidth: 1,
-        borderColor: '#f0f0f0',
-    },
-    billHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    billNumber: {
-        fontSize: 12,
-        fontWeight: '800',
-        color: '#8e24aa',
-        backgroundColor: '#f3e5f5',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-    },
-    statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-    },
-    statusText: {
-        fontSize: 10,
-        fontWeight: '800',
-    },
-    billInfo: {
-        marginBottom: 10,
-    },
-    customerName: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#333',
-        marginBottom: 2,
-    },
-    dateText: {
-        fontSize: 12,
-        color: '#888',
-        fontWeight: '500',
-    },
-    billFooter: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderTopWidth: 1,
-        borderTopColor: '#f5f5f5',
-        paddingTop: 10,
-    },
-    itemsText: {
-        fontSize: 13,
-        color: '#555',
-        fontWeight: '600',
-    },
-    amountText: {
+    statValue: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#111',
+        color: '#333',
     },
     
     centerContainer: {
@@ -468,11 +348,5 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#999',
         marginTop: 15,
-    },
-    emptySubText: {
-        fontSize: 13,
-        color: '#aaa',
-        marginTop: 5,
-        textAlign: 'center',
     },
 });

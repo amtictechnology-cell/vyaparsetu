@@ -10,6 +10,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
+  ScrollView,
 } from "react-native";
 import { BASE_URL } from "../constants/Config";
 
@@ -54,47 +56,59 @@ export default function SignupScreen() {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.content}
+        style={styles.keyboardView}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Vyapar<Text style={styles.setuText}>Setu</Text></Text>
-          <Text style={styles.subtitle}>{"India's No. 1 Business App"}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Login or Signup</Text>
-          <Text style={styles.cardSubtitle}>Enter your mobile number to proceed</Text>
-
-          <View style={styles.inputContainer}>
-            <View style={styles.countryCode}>
-              <Text style={styles.countryText}>🇮🇳 +91</Text>
-            </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Mobile Number"
-              keyboardType="phone-pad"
-              value={mobile}
-              onChangeText={handleMobileChange}
-              maxLength={10}
-              autoFocus
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          
+          <View style={styles.imageContainer}>
+            <Image 
+              source={require('../assets/images/login.png')}
+              style={styles.loginImage}
+              resizeMode="contain"
             />
           </View>
 
-          <TouchableOpacity
-            style={[styles.button, mobile.length === 10 ? styles.buttonActive : styles.buttonDisabled]}
-            onPress={handleContinue}
-            disabled={mobile.length !== 10}
-          >
-            <Text style={styles.buttonText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.header}>
+            <Text style={styles.title}>Vyapar<Text style={styles.setuText}>Setu</Text></Text>
+            <Text style={styles.subtitle}>{"India's No. 1 Business App"}</Text>
+          </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            By continuing, you agree to our{"\n"}
-            <Text style={styles.link}>Terms of Service</Text> & <Text style={styles.link}>Privacy Policy</Text>
-          </Text>
-        </View>
+          <View style={styles.card}>
+            <Text style={styles.cardSubtitle}>Enter your mobile number to proceed</Text>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.countryCode}>
+                <Text style={styles.countryText}>🇮🇳 +91</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Mobile Number"
+                placeholderTextColor="#999"
+                keyboardType="phone-pad"
+                value={mobile}
+                onChangeText={handleMobileChange}
+                maxLength={10}
+                autoFocus
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, mobile.length === 10 ? styles.buttonActive : styles.buttonDisabled]}
+              onPress={handleContinue}
+              disabled={mobile.length !== 10}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>Continue</Text>
+            </TouchableOpacity>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                By continuing, you agree to our{"\n"}
+                <Text style={styles.link}>Terms of Service</Text> & <Text style={styles.link}>Privacy Policy</Text>
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -105,17 +119,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
-  content: {
+  keyboardView: {
     flex: 1,
-    paddingHorizontal: 20,
-    justifyContent: "center",
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "flex-start",
+    paddingTop: 20,
+  },
+  imageContainer: {
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  loginImage: {
+    width: 320,
+    height: 320,
   },
   header: {
     alignItems: "center",
-    marginBottom: 40,
+    marginBottom: 30,
   },
   title: {
-    fontSize: 42,
+    fontSize: 38,
     fontWeight: "900",
     color: "#0059ff",
     letterSpacing: -1,
@@ -124,92 +149,99 @@ const styles = StyleSheet.create({
     color: "#ff6600",
   },
   subtitle: {
-    fontSize: 14,
-    color: "#1e1e1e",
+    fontSize: 15,
+    color: "#444",
     fontWeight: "600",
-    marginTop: -5,
+    marginTop: 2,
+    letterSpacing: 0.5,
   },
   card: {
+    flex: 1,
     backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 24,
-    elevation: 8,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    paddingHorizontal: 28,
+    paddingTop: 40,
+    paddingBottom: 40,
+    elevation: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#000",
-    marginBottom: 4,
+    shadowRadius: 24,
   },
   cardSubtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#666",
-    marginBottom: 24,
+    marginBottom: 28,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#e0e0e0",
-    borderRadius: 12,
-    marginBottom: 24,
-    height: 56,
+    borderColor: "#e8eaed",
+    borderRadius: 16,
+    marginBottom: 28,
+    height: 60,
+    backgroundColor: "#fff",
     overflow: "hidden",
   },
   countryCode: {
-    paddingHorizontal: 12,
-    backgroundColor: "#f5f5f5",
+    paddingHorizontal: 16,
+    backgroundColor: "#f5f7fa",
     height: "100%",
     justifyContent: "center",
-    borderRightWidth: 1,
-    borderRightColor: "#e0e0e0",
+    borderRightWidth: 1.5,
+    borderRightColor: "#e8eaed",
   },
   countryText: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#333",
+    color: "#1e1e1e",
   },
   input: {
     flex: 1,
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     paddingHorizontal: 16,
-    color: "#000",
+    color: "#1e1e1e",
   },
   button: {
-    height: 56,
-    borderRadius: 12,
+    height: 58,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ccc",
+    backgroundColor: "#e0e0e0",
   },
   buttonActive: {
-    backgroundColor: "#0059ff",
+    backgroundColor: "#ff6600",
+    shadowColor: "#ff6600",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   buttonDisabled: {
-    backgroundColor: "#a0a0a0",
+    backgroundColor: "#e0e0e0",
   },
   buttonText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "800",
+    letterSpacing: 0.5,
   },
   footer: {
-    marginTop: 40,
+    marginTop: 30,
     alignItems: "center",
   },
   footerText: {
-    fontSize: 12,
-    color: "#333",
+    fontSize: 13,
+    color: "#666",
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 20,
+    fontWeight: "500",
   },
   link: {
-    color: "#0059ff",
+    color: "#ff6600",
     fontWeight: "700",
   },
 });

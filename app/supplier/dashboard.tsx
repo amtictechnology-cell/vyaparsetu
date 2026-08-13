@@ -1,4 +1,4 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+﻿import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
@@ -40,11 +40,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#0c831f',
+        backgroundColor: '#0059ff',
         padding: 20,
         marginBottom: 8,
         elevation: 6,
-        shadowColor: '#0c831f',
+        shadowColor: '#0059ff',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
@@ -75,21 +75,21 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         borderLeftWidth: 5,
     },
-    cardGreen: { borderLeftColor: '#0c831f' },
+    cardGreen: { borderLeftColor: '#0059ff' },
     cardBlue: { borderLeftColor: '#1565c0' },
     cardIconBox: {
         width: 56, height: 56, borderRadius: 16,
-        backgroundColor: '#e8f5e9',
+        backgroundColor: '#e6f0ff',
         justifyContent: 'center', alignItems: 'center',
         marginRight: 14,
     },
     cardIconBoxBlue: { backgroundColor: '#e3f2fd' },
     cardContent: { flex: 1 },
-    cardTitle: { fontSize: 16, fontWeight: '900', color: '#0c831f', marginBottom: 4 },
+    cardTitle: { fontSize: 16, fontWeight: '900', color: '#0059ff', marginBottom: 4 },
     cardDesc: { fontSize: 12, color: '#888', fontWeight: '500', lineHeight: 17 },
     cardArrow: {
         width: 34, height: 34, borderRadius: 10,
-        backgroundColor: '#e8f5e9',
+        backgroundColor: '#e6f0ff',
         justifyContent: 'center', alignItems: 'center',
     },
     cardArrowBlue: { backgroundColor: '#e3f2fd' },
@@ -109,3 +109,4 @@ const styles = StyleSheet.create({
     },
     modalTopTitle: { fontSize: 16, fontWeight: '900', color: '#111' },
 });
+

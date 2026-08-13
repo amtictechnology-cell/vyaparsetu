@@ -11,6 +11,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import { BASE_URL } from "../constants/Config";
 
@@ -110,9 +111,22 @@ export default function OTPScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.content}
       >
+        <View style={styles.imageContainer}>
+          <Image 
+            source={require('../assets/images/otp.png')}
+            style={styles.otpImage}
+            resizeMode="contain"
+          />
+        </View>
+
         <View style={styles.header}>
           <Text style={styles.title}>Verify OTP</Text>
-          <Text style={styles.subtitle}>Enter the code sent to your mobile</Text>
+          <Text style={styles.subtitle}>
+            Enter the code sent to <Text style={styles.mobileText}>+91 {mobile}</Text>
+          </Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.changeNumberButton}>
+            <Text style={styles.changeNumberText}>Change Number</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.otpContainer}>
@@ -153,7 +167,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    paddingTop: 0,
+  },
+  imageContainer: {
+    alignItems: "center",
+    marginBottom: 0,
+  },
+  otpImage: {
+    width: 320,
+    height: 320,
   },
   header: {
     marginBottom: 40,
@@ -167,6 +190,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     marginTop: 8,
+  },
+  mobileText: {
+    fontWeight: "700",
+    color: "#1e1e1e",
+  },
+  changeNumberButton: {
+    marginTop: 8,
+  },
+  changeNumberText: {
+    color: "#0059ff",
+    fontSize: 15,
+    fontWeight: "700",
   },
   otpContainer: {
     flexDirection: "row",

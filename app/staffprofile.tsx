@@ -47,10 +47,12 @@ interface StaffPayableSalary {
 }
 
 interface FullStaff {
-    _id: string;
+    _id?: string;
+    id?: string;
     staffId: string;
-    firstName: string;
-    lastName: string;
+    firstName?: string;
+    lastName?: string;
+    name?: string;
     mobile: string;
     adharNumber: string;
     salary: number;
@@ -75,6 +77,7 @@ interface Transaction {
     type: 'give' | 'take';
     description?: string;
     date?: string;
+    paymentMode?: string;
     paymentScreenshot?: string;
     createdAt: string;
 }
@@ -112,6 +115,7 @@ export default function StaffProfile() {
     const [transAmount, setTransAmount] = useState("");
     const [transDesc, setTransDesc] = useState("");
     const [transDate, setTransDate] = useState("");
+    const [transPaymentMode, setTransPaymentMode] = useState("Cash");
     const [transScreenshot, setTransScreenshot] = useState<string | null>(null);
     const [submittingTrans, setSubmittingTrans] = useState(false);
 
@@ -352,7 +356,7 @@ export default function StaffProfile() {
                                         <View style={styles.ledgerCardLeft}>
                                             <Text style={styles.ledgerCardDateText}>{formatTransDate(t.date)}</Text>
                                             <Text style={styles.ledgerCardModeText} numberOfLines={1}>
-                                                Payment Mode : {t.description || (t.type === 'give' ? 'Cash' : 'Refund')}
+                                                Payment Mode : {t.paymentMode || (t.type === 'give' ? 'Cash' : 'Refund')}
                                             </Text>
                                         </View>
 
@@ -426,6 +430,24 @@ export default function StaffProfile() {
                                         value={transDate}
                                         onChangeText={setTransDate}
                                     />
+                                </View>
+
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.label}>Payment Mode</Text>
+                                    <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                                        <TouchableOpacity 
+                                            style={[styles.roleChip, transPaymentMode === 'Cash' && styles.activeRoleChip]} 
+                                            onPress={() => setTransPaymentMode('Cash')}
+                                        >
+                                            <Text style={[styles.roleChipText, transPaymentMode === 'Cash' && styles.activeRoleChipText]}>Cash</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            style={[styles.roleChip, transPaymentMode === 'Online' && styles.activeRoleChip]} 
+                                            onPress={() => setTransPaymentMode('Online')}
+                                        >
+                                            <Text style={[styles.roleChipText, transPaymentMode === 'Online' && styles.activeRoleChipText]}>Online</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
 
                                 <View style={styles.inputContainer}>
@@ -654,6 +676,7 @@ export default function StaffProfile() {
         setTransType(type);
         setTransAmount("");
         setTransDesc("");
+        setTransPaymentMode("Cash");
         setTransDate(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
         setTransScreenshot(null);
         setTransModalVisible(true);
@@ -711,34 +734,28 @@ export default function StaffProfile() {
         setSubmittingTrans(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const formData = new FormData();
             const sId = staff?.staffId || staff?._id;
             if (!sId) {
                 Alert.alert("Error", "Staff ID not found");
                 return;
             }
 
-            formData.append("staffId", sId);
-            formData.append("amount", transAmount);
-            if (transDesc) formData.append("description", transDesc);
-            if (transDate) formData.append("date", transDate);
+            const payload = {
+                staffId: sId,
+                amount: Number(transAmount),
+                type: transType,
+                paymentMode: transPaymentMode,
+                description: transDesc,
+                date: transDate
+            };
 
-            if (transScreenshot) {
-                const uriParts = transScreenshot.split('.');
-                const fileType = uriParts[uriParts.length - 1];
-                formData.append("paymentScreenshot", {
-                    uri: transScreenshot,
-                    name: `screenshot.${fileType}`,
-                    type: `image/${fileType}`,
-                } as any);
-            }
-
-            const response = await fetch(`${BASE_URL}/staff/transaction/${transType}`, {
+            const response = await fetch(`${BASE_URL}/staff/transaction/add`, {
                 method: "POST",
                 headers: {
+                    "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
                 },
-                body: formData
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
@@ -803,7 +820,7 @@ export default function StaffProfile() {
         setIsKhatabookLoading(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch(`${BASE_URL}/staff/khatabook/${sId}`, {
+            const response = await fetch(`${BASE_URL}/staff/attendance/get?staffId=${sId}`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -811,8 +828,8 @@ export default function StaffProfile() {
             });
             const data = await response.json();
             if (response.ok && data) {
-                if (Array.isArray(data.khatabook)) {
-                    setKhatabookData(data.khatabook);
+                if (Array.isArray(data.data)) {
+                    setKhatabookData(data.data);
                 } else if (Array.isArray(data)) {
                     setKhatabookData(data);
                 } else if (Array.isArray(data.data)) {
@@ -830,7 +847,7 @@ export default function StaffProfile() {
         setLoadingTransactions(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch(`${BASE_URL}/staff/transaction/get-transactions?staffId=${sId}`, {
+            const response = await fetch(`${BASE_URL}/staff/transaction/get?staffId=${sId}`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -858,8 +875,8 @@ export default function StaffProfile() {
                 }
             });
             const data = await response.json();
-            if (response.ok && data && data.staffList && data.staffList.length > 0) {
-                const foundStaff = data.staffList[0];
+            if (response.ok && data && data.data && data.data.length > 0) {
+                const foundStaff = data.data[0];
                 setStaff(foundStaff);
                 const sId = foundStaff.staffId || foundStaff._id;
                 fetchKhatabook(sId);
@@ -922,20 +939,22 @@ export default function StaffProfile() {
                                 <Image source={{ uri: staff.profileImage }} style={styles.profileImage} />
                             ) : (
                                 <View style={styles.avatarPlaceholder}>
-                                    <Text style={styles.avatarText}>{staff.firstName?.charAt(0)}</Text>
+                                    <Text style={styles.avatarText}>{staff.name ? staff.name.charAt(0).toUpperCase() : (staff.firstName?.charAt(0) || 'S')}</Text>
                                 </View>
                             )}
                         </View>
                         <View style={styles.headerInfo}>
-                            <Text style={styles.staffName}>{staff.firstName} {staff.lastName}</Text>
+                            <Text style={styles.staffName}>{staff.name || `${staff.firstName || ''} ${staff.lastName || ''}`.trim()}</Text>
                             <View style={styles.mobileRow}>
                                 <Ionicons name="call" size={16} color="#ff6600" />
                                 <Text style={styles.staffMobile}>{staff.mobile}</Text>
                             </View>
                             <View style={styles.badgeRow}>
-                                <View style={styles.roleBadge}>
-                                    <Text style={styles.roleText}>{staff.role.toUpperCase()}</Text>
-                                </View>
+                                {staff.role ? (
+                                    <View style={styles.roleBadge}>
+                                        <Text style={styles.roleText}>{staff.role.toUpperCase()}</Text>
+                                    </View>
+                                ) : null}
                             </View>
                         </View>
                     </View>
@@ -961,10 +980,10 @@ export default function StaffProfile() {
                     {showDetails && (
                         <View style={styles.collapsibleContent}>
                             <Text style={styles.innerSectionTitle}>Personal Info</Text>
-                            <DetailItem icon="card-outline" label="Aadhaar Number" value={staff.adharNumber} />
-                            <DetailItem icon="calendar-outline" label="Date of Birth" value={staff.DOB} />
+                            <DetailItem icon="card-outline" label="Aadhaar Number" value={staff.adharNumber || "N/A"} />
+                            <DetailItem icon="calendar-outline" label="Date of Birth" value={staff.DOB || "N/A"} />
                             <DetailItem icon="mail-outline" label="Email" value={staff.email || "N/A"} />
-                            <DetailItem icon="location-outline" label="City" value={staff.address?.city} />
+                            <DetailItem icon="location-outline" label="Address" value={typeof staff.address === 'string' ? staff.address : (staff.address?.city || "N/A")} />
 
                             <View style={styles.divider} />
                             <Text style={styles.innerSectionTitle}>Employment</Text>
@@ -1475,6 +1494,28 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '600',
         color: '#000',
+    },
+    roleChip: {
+        flex: 1,
+        height: 40,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+    },
+    activeRoleChip: {
+        backgroundColor: '#ff6600',
+        borderColor: '#ff6600',
+    },
+    roleChipText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#64748b',
+    },
+    activeRoleChipText: {
+        color: '#fff',
     },
     imagePicker: {
         height: 120,

@@ -63,7 +63,7 @@ const FloatingLabelInput = ({ label, value, onChangeText, ...props }: any) => {
         }),
         color: animatedIsFocused.interpolate({
             inputRange: [0, 1],
-            outputRange: ["#aaa", "#0c831f"],
+            outputRange: ["#aaa", "#ff6600"],
         }),
         backgroundColor: "#fff",
         paddingHorizontal: 4,
@@ -79,7 +79,7 @@ const FloatingLabelInput = ({ label, value, onChangeText, ...props }: any) => {
                 {...props}
                 style={[
                     styles.input,
-                    isFocused && { borderColor: "#0c831f" }
+                    isFocused && { borderColor: "#ff6600" }
                 ]}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
@@ -349,7 +349,7 @@ export default function BookingRooms() {
                 </View>
                 <View style={styles.actionIcons}>
                     <TouchableOpacity onPress={() => handleCall(item.mobileNumber)} style={styles.iconButtonCall}>
-                        <Ionicons name="call" size={18} color="#0c831f" />
+                        <Ionicons name="call" size={18} color="#ff6600" />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconButtonEdit}>
                         <Ionicons name="create" size={18} color="#f57c00" />
@@ -366,7 +366,7 @@ export default function BookingRooms() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Booking Rooms</Text>
                 <View style={{ width: 40 }} />
@@ -392,11 +392,11 @@ export default function BookingRooms() {
                 keyExtractor={(item) => item.customerId || item._id || Math.random().toString()}
                 contentContainerStyle={styles.listContent}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={() => fetchCustomers(true)} colors={["#0c831f"]} />
+                    <RefreshControl refreshing={refreshing} onRefresh={() => fetchCustomers(true)} colors={["#ff6600"]} />
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        {loading ? <ActivityIndicator size="large" color="#0c831f" /> : <Text style={styles.emptyText}>No bookings found</Text>}
+                        {loading ? <ActivityIndicator size="large" color="#ff6600" /> : <Text style={styles.emptyText}>No bookings found</Text>}
                     </View>
                 }
             />
@@ -542,13 +542,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: Platform.OS === 'android' ? 40 : 10,
         paddingBottom: 20,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
     },
     backButton: { padding: 8 },
-    headerTitle: { fontSize: 20, fontWeight: "900", color: "#000" },
+    headerTitle: { fontSize: 20, fontWeight: "900", color: "#fff" },
     searchContainer: {
         padding: 16,
-        backgroundColor: "#ffb703",
+        backgroundColor: "#ff6600",
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24
     },
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         justifyContent: "center",
         alignItems: "center",
         elevation: 6,
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
     imagePickerText: { fontSize: 12, color: "#666", marginTop: 4, fontWeight: '600' },
     saveButton: {
         height: 56,
-        backgroundColor: "#0c831f",
+        backgroundColor: "#ff6600",
         borderRadius: 12,
         justifyContent: "center",
         alignItems: "center",
@@ -705,3 +705,4 @@ const styles = StyleSheet.create({
     },
     confirmDeleteBtnText: { color: "#fff", fontWeight: "700" },
 });
+
