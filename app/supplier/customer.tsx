@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -58,22 +58,26 @@ export default function SupplierCustomer() {
 
     const getToken = async () => AsyncStorage.getItem('userToken');
 
-    const loadCachedCustomers = async () => {
-        try {
-            const cached = await AsyncStorage.getItem('supplier_customers');
-            if (cached) {
-                setCustomers(JSON.parse(cached));
-                setLoading(false);
-            }
-        } catch (e) {
-            console.error('Failed to load cached customers:', e);
-        }
-    };
+    const CACHE_KEY = 'supplier_customers_cache_ttl';
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
     const fetchCustomers = useCallback(async (isRefresh = false) => {
         try {
-            if (isRefresh) setRefreshing(true);
-            else if (customers.length === 0) setLoading(true);
+            if (isRefresh) {
+                setRefreshing(true);
+            } else {
+                const cachedStr = await AsyncStorage.getItem(CACHE_KEY);
+                if (cachedStr) {
+                    const parsed = JSON.parse(cachedStr);
+                    setCustomers(parsed.data);
+                    setLoading(false);
+                    // If cache is valid, skip network fetch
+                    if (Date.now() - parsed.timestamp < CACHE_TTL) {
+                        return;
+                    }
+                }
+                if (customers.length === 0) setLoading(true);
+            }
 
             const token = await getToken();
             const res = await fetch(`${BASE_URL}/supplier/customer`, {
@@ -82,7 +86,10 @@ export default function SupplierCustomer() {
             const data = await res.json();
             if (res.ok && data.success) {
                 setCustomers(data.data);
-                await AsyncStorage.setItem('supplier_customers', JSON.stringify(data.data));
+                await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
+                    data: data.data,
+                    timestamp: Date.now()
+                }));
             }
         } catch (e) {
             console.error('Fetch error:', e);
@@ -93,11 +100,7 @@ export default function SupplierCustomer() {
     }, [customers.length]);
 
     useEffect(() => {
-        const init = async () => {
-            await loadCachedCustomers();
-            fetchCustomers();
-        };
-        init();
+        fetchCustomers();
     }, []);
 
     const resetForm = () => {

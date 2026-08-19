@@ -59,7 +59,7 @@ export default function OTPScreen() {
 
           const user = data?.user;
           if (user) {
-            const category = (user.businessCategory || "").toLowerCase();
+            const category = (user.businessCategory || "").toLowerCase().trim();
 
             if (!category) {
               router.replace({ pathname: "/information", params: { userId: user.userId } } as any);

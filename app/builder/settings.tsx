@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { BASE_URL } from "../constants/Config";
+import { BASE_URL } from "../../constants/Config";
 import {
     ActivityIndicator,
     Alert,
@@ -17,10 +17,10 @@ import {
     View,
     Modal,
 } from "react-native";
-import LogoutModal from "../components/LogoutModal";
-import ActivePlanCard from "../components/ActivePlanCard";
+import LogoutModal from "../../components/LogoutModal";
+import ActivePlanCard from "../../components/ActivePlanCard";
 
-export default function SettingsScreen() {
+export default function BuilderSettingsScreen() {
     const router = useRouter();
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -35,7 +35,6 @@ export default function SettingsScreen() {
     useEffect(() => {
         const fetchProfileAndPlan = async () => {
             try {
-                // Check cache first to avoid initial loader
                 const cachedProfileStr = await AsyncStorage.getItem('cachedSettingsProfile');
                 if (cachedProfileStr) {
                     const parsedProfile = JSON.parse(cachedProfileStr);
@@ -63,7 +62,6 @@ export default function SettingsScreen() {
                         currentProfile = data.user;
                         await AsyncStorage.setItem('cachedSettingsProfile', JSON.stringify(data.user));
                         
-                        // Use activeSubscription from profile if available
                         if (currentProfile.activeSubscription) {
                             const fetchedPlan = {
                                 ...currentProfile.activeSubscription,
@@ -72,17 +70,15 @@ export default function SettingsScreen() {
                             setActivePlan(fetchedPlan);
                             setActivatedAt(currentProfile.activeSubscription.activatedAt);
                             
-                            // Save it back to AsyncStorage to keep it in sync (optional but good practice)
                             await AsyncStorage.setItem("selectedPlan", JSON.stringify(fetchedPlan));
                             await AsyncStorage.setItem("planActivatedAt", currentProfile.activeSubscription.activatedAt);
                             
                             setLoading(false);
-                            return; // Stop here, we got the active plan directly from profile
+                            return;
                         }
                     }
                 }
 
-                // Fallback to AsyncStorage if no activeSubscription in profile
                 const planString = await AsyncStorage.getItem("selectedPlan");
                 const activatedAtString = await AsyncStorage.getItem("planActivatedAt");
                 
@@ -95,7 +91,7 @@ export default function SettingsScreen() {
                         const fallbackPlan = {
                             planId: "PLNSILVER",
                             name: "Active Plan",
-                            category: currentProfile?.businessCategory || "hotel",
+                            category: currentProfile?.businessCategory || "builder",
                             price: 199,
                             durationInDays: 30,
                             features: ["Basic Business Setup"],
@@ -191,7 +187,7 @@ export default function SettingsScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Settings</Text>
+                <Text style={styles.headerTitle}>Builder Settings</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -200,11 +196,11 @@ export default function SettingsScreen() {
                 <View style={styles.hotelBanner}>
                     <View style={styles.bannerRow}>
                         <View style={styles.avatarContainer}>
-                            <Ionicons name="person" size={28} color="#ff6600" />
+                            <Ionicons name="business" size={28} color="#ff6600" />
                         </View>
                         <View style={styles.profileDetails}>
                             <Text style={styles.businessName}>{profile?.businessName || "Your Business"}</Text>
-                            <Text style={styles.categoryBadge}>{(profile?.businessCategory || "Category").toUpperCase()}</Text>
+                            <Text style={styles.categoryBadge}>{(profile?.businessCategory || "Builder").toUpperCase()}</Text>
                         </View>
                         <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
                             <Ionicons name="pencil" size={18} color="#0059ff" />
@@ -224,36 +220,6 @@ export default function SettingsScreen() {
 
                 {/* Active Plan Card Component */}
                 <ActivePlanCard plan={activePlan} activatedAtString={activatedAt} />
-
-                {/* Management Section (Edge-to-Edge) */}
-                <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>Management</Text>
-                    <TouchableOpacity style={styles.edgeRow} onPress={() => router.push("/additem")}>
-                        <View style={[styles.infoIconWrapper, { backgroundColor: "#fff0e6" }]}>
-                            <Ionicons name="restaurant-outline" size={20} color="#ff6600" />
-                        </View>
-                        <View style={styles.actionTextWrapper}>
-                            <Text style={styles.actionLabel}>
-                                {profile?.businessCategory ? `${profile.businessCategory.charAt(0).toUpperCase() + profile.businessCategory.slice(1)} Items` : "Hotel Items"}
-                            </Text>
-                            <Text style={styles.actionSubtitle}>
-                                Add and manage {profile?.businessCategory ? profile.businessCategory.toLowerCase() : "hotel"} items/rates
-                            </Text>
-                        </View>
-                        <Ionicons name="chevron-forward-outline" size={18} color="#999" />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.edgeRow} onPress={() => router.push("/trackrecord")}>
-                        <View style={[styles.infoIconWrapper, { backgroundColor: "#e6f0ff" }]}>
-                            <Ionicons name="analytics-outline" size={20} color="#0059ff" />
-                        </View>
-                        <View style={styles.actionTextWrapper}>
-                            <Text style={styles.actionLabel}>Track Record</Text>
-                            <Text style={styles.actionSubtitle}>View room bookings and billing analytics</Text>
-                        </View>
-                        <Ionicons name="chevron-forward-outline" size={18} color="#999" />
-                    </TouchableOpacity>
-                </View>
 
                 {/* Actions Section */}
                 <View style={styles.sectionContainer}>
@@ -280,8 +246,6 @@ export default function SettingsScreen() {
                         </View>
                         <Ionicons name="chevron-forward-outline" size={18} color="#999" />
                     </TouchableOpacity>
-
-
                 </View>
 
                 {/* Logout Button */}

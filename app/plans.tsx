@@ -80,7 +80,7 @@ export default function PlansScreen() {
           const profileData = await profileResponse.json();
 
           if (profileResponse.ok && profileData.user) {
-            const userCategory = (profileData.user.businessCategory || "").toLowerCase();
+            const userCategory = (profileData.user.businessCategory || "").toLowerCase().trim();
             if (userCategory === "shop") {
               router.replace("/Shop" as any);
             } else if (userCategory === "supplier" || userCategory === "suppliers") {
@@ -164,7 +164,7 @@ export default function PlansScreen() {
       const profileData = await profileResponse.json();
 
       if (profileResponse.ok && profileData.user) {
-        const userCategory = (profileData.user.businessCategory || "").toLowerCase();
+        const userCategory = (profileData.user.businessCategory || "").toLowerCase().trim();
         
         if (userCategory === "shop") {
           router.replace("/Shop" as any);

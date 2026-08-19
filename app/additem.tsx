@@ -102,9 +102,9 @@ export default function AddItemScreen() {
     const [itemName, setItemName] = useState("");
     const [unit, setUnit] = useState("");
     const [rate, setRate] = useState("");
-    const [itemImage, setItemImage] = useState<string | null>(null);
     const [category, setCategory] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [batchItems, setBatchItems] = useState<{itemName: string, rate: string, unit: string}[]>([]);
 
     // New states for cart and filtering
     const [selectedCategory, setSelectedCategory] = useState("All");
@@ -115,8 +115,22 @@ export default function AddItemScreen() {
     };
 
     const fetchItems = async (isRefreshing = false) => {
-        if (isRefreshing) setRefreshing(true);
-        else setLoading(true);
+        if (isRefreshing) {
+            setRefreshing(true);
+        } else {
+            const cachedDataStr = await AsyncStorage.getItem('cachedHotelItems');
+            const cachedTimeStr = await AsyncStorage.getItem('cachedHotelItemsTime');
+            if (cachedDataStr && cachedTimeStr) {
+                const cachedTime = parseInt(cachedTimeStr, 10);
+                const now = new Date().getTime();
+                const fourMinutes = 4 * 60 * 1000;
+                if (now - cachedTime < fourMinutes) {
+                    setItems(JSON.parse(cachedDataStr));
+                    return;
+                }
+            }
+            setLoading(true);
+        }
 
         try {
             const token = await AsyncStorage.getItem("userToken");
@@ -137,6 +151,8 @@ export default function AddItemScreen() {
             if (response.ok) {
                 const fetchedList = data.data || data.items || (Array.isArray(data) ? data : []);
                 setItems(fetchedList);
+                await AsyncStorage.setItem('cachedHotelItems', JSON.stringify(fetchedList));
+                await AsyncStorage.setItem('cachedHotelItemsTime', new Date().getTime().toString());
             } else {
                 Alert.alert("Error", data.message || "Failed to fetch hotel items.");
             }
@@ -153,102 +169,72 @@ export default function AddItemScreen() {
         fetchItems();
     }, []);
 
-    const launchCamera = async () => {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert("Permission Denied", "Camera permission is required to take photo.");
+    const handleAddMoreItem = () => {
+        if (!itemName || !unit || !rate) {
+            Alert.alert("Error", "Please fill item name, rate, and unit first.");
             return;
         }
-
-        const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.7,
-        });
-
-        if (!result.canceled) {
-            setItemImage(result.assets[0].uri);
-        }
-    };
-
-    const launchGallery = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.7,
-        });
-
-        if (!result.canceled) {
-            setItemImage(result.assets[0].uri);
-        }
-    };
-
-    const pickImage = () => {
-        Alert.alert(
-            "Select Item Image",
-            "Choose how you want to upload the photo",
-            [
-                { text: "Camera", onPress: launchCamera },
-                { text: "Gallery", onPress: launchGallery },
-                { text: "Cancel", style: "cancel" }
-            ]
-        );
+        setBatchItems([...batchItems, { itemName, rate, unit }]);
+        setItemName("");
+        setUnit("");
+        setRate("");
     };
 
     const handleAction = async () => {
-        if (!itemName || !unit || !rate || !category) {
-            Alert.alert("ValidationError", "Please fill all required fields, including Category.");
+        if (!category) {
+            Alert.alert("Error", "Please select a category.");
+            return;
+        }
+        
+        const itemsToSave = [...batchItems];
+        if (itemName && unit && rate) {
+            itemsToSave.push({ itemName, rate, unit });
+        }
+
+        if (itemsToSave.length === 0) {
+            Alert.alert("Error", "Please add at least one item.");
             return;
         }
 
         setLoading(true);
-        const formData = new FormData();
-        formData.append("itemName", itemName);
-        formData.append("unit", unit);
-        formData.append("rate", rate);
-        formData.append("category", category);
-
-        if (editingId) {
-            formData.append("itemId", editingId);
-        }
-
-        if (itemImage && itemImage.startsWith("file://")) {
-            const filename = itemImage.split("/").pop();
-            const match = /\.(\w+)$/.exec(filename || "");
-            const type = match ? `image/${match[1]}` : `image`;
-            formData.append("itemImage", {
-                uri: itemImage,
-                name: filename,
-                type,
-            } as any);
-        }
-
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const url = editingId ? `${BASE_URL}/hotel/edit-item` : `${BASE_URL}/hotel/add-item`;
-            const method = editingId ? "PATCH" : "POST";
+            
+            for (const item of itemsToSave) {
+                const formData = new FormData();
+                formData.append("itemName", item.itemName);
+                formData.append("unit", item.unit);
+                formData.append("rate", item.rate);
+                formData.append("category", category);
 
-            const response = await fetch(url, {
-                method,
-                body: formData,
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                    "Authorization": `Bearer ${token}`
+                if (editingId && itemsToSave.length === 1) {
+                    formData.append("itemId", editingId);
                 }
-            });
 
-            const data = await response.json();
-            if (response.ok || data.status === "success" || data.success) {
-                showToast(editingId ? "Item updated successfully" : "Item added successfully");
-                resetForm();
-                fetchItems();
-            } else {
-                Alert.alert("Error", data.message || "Failed to save item.");
+                const url = (editingId && itemsToSave.length === 1) ? `${BASE_URL}/hotel/edit-item` : `${BASE_URL}/hotel/add-item`;
+                const method = (editingId && itemsToSave.length === 1) ? "PATCH" : "POST";
+
+                const response = await fetch(url, {
+                    method,
+                    body: formData,
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                if (!response.ok && data.status !== "success" && !data.success) {
+                    throw new Error(data.message || "Failed to save item");
+                }
             }
+
+            showToast(editingId ? "Item updated successfully" : "Items added successfully");
+            resetForm();
+            fetchItems(true); // Force refresh to get new items
         } catch (error) {
-            console.error("Save item error:", error);
-            Alert.alert("Error", "Network request failed");
+            console.error("Save items error:", error);
+            Alert.alert("Error", error instanceof Error ? error.message : "Failed to save items");
         } finally {
             setLoading(false);
         }
@@ -292,8 +278,8 @@ export default function AddItemScreen() {
         setUnit("");
         setRate("");
         setCategory("");
-        setItemImage(null);
         setEditingId(null);
+        setBatchItems([]);
     };
 
     const handleEdit = (item: HotelItem) => {
@@ -301,13 +287,7 @@ export default function AddItemScreen() {
         setUnit(item.unit);
         setRate(String(item.rate));
         setCategory(item.category || "");
-        
-        // Resolve image URL
-        if (item.itemImage) {
-            setItemImage(resolveImageUrl(item.itemImage));
-        } else {
-            setItemImage(null);
-        }
+        setBatchItems([]);
 
         setEditingId(item.itemId || item._id);
         setModalVisible(true);
@@ -473,68 +453,73 @@ export default function AddItemScreen() {
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <View style={styles.form}>
                                 <FloatingLabelInput
+                                    label="Category Name"
+                                    value={category}
+                                    onChangeText={setCategory}
+                                />
+
+                                {batchItems.length > 0 && (
+                                    <View style={styles.batchList}>
+                                        {batchItems.map((item, index) => (
+                                            <View key={index} style={styles.batchItemRow}>
+                                                <Text style={styles.batchItemName}>{item.itemName}</Text>
+                                                <Text style={styles.batchItemDetails}>₹{item.rate} / {item.unit}</Text>
+                                                <TouchableOpacity onPress={() => setBatchItems(batchItems.filter((_, i) => i !== index))}>
+                                                    <Ionicons name="close-circle" size={20} color="#ff3b30" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
+
+                                <FloatingLabelInput
                                     label="Item Name"
                                     value={itemName}
                                     onChangeText={setItemName}
                                 />
-                                <FloatingLabelInput
-                                    label="Unit (e.g. per plate, per piece, kg)"
-                                    value={unit}
-                                    onChangeText={setUnit}
-                                />
-                                <FloatingLabelInput
-                                    label="Rate (₹)"
-                                    value={rate}
-                                    onChangeText={setRate}
-                                    keyboardType="numeric"
-                                />
+                                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                                    <View style={{ flex: 1, marginRight: 8 }}>
+                                        <FloatingLabelInput
+                                            label="Rate (₹)"
+                                            value={rate}
+                                            onChangeText={setRate}
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+                                    <View style={{ flex: 1, marginLeft: 8 }}>
+                                        <FloatingLabelInput
+                                            label="Unit (e.g. piece)"
+                                            value={unit}
+                                            onChangeText={setUnit}
+                                        />
+                                    </View>
+                                </View>
 
-                                <Text style={styles.imageLabel}>Category</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryContainer}>
-                                    {["Roti", "Sabji", "Cold Drink", "BreakFast"].map((cat) => (
-                                        <TouchableOpacity
-                                            key={cat}
-                                            style={[
-                                                styles.categoryChip,
-                                                category === cat && styles.categoryChipSelected
-                                            ]}
-                                            onPress={() => setCategory(cat)}
-                                        >
-                                            <Text style={[
-                                                styles.categoryChipText,
-                                                category === cat && styles.categoryChipTextSelected
-                                            ]}>
-                                                {cat}
+                                {!editingId && (
+                                    <TouchableOpacity style={styles.addMoreBtn} onPress={handleAddMoreItem}>
+                                        <Ionicons name="add" size={18} color="#ff6600" />
+                                        <Text style={styles.addMoreBtnText}>Add More Items</Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                <View style={styles.modalActionRow}>
+                                    <TouchableOpacity style={styles.cancelActionBtn} onPress={resetForm}>
+                                        <Text style={styles.cancelActionBtnText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.saveActionBtn, loading && { opacity: 0.7 }]}
+                                        onPress={handleAction}
+                                        disabled={loading}
+                                    >
+                                        {loading ? (
+                                            <ActivityIndicator color="#fff" />
+                                        ) : (
+                                            <Text style={styles.saveActionBtnText}>
+                                                {editingId ? "Save Changes" : "Save Items"}
                                             </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-
-                                <Text style={styles.imageLabel}>Item Image</Text>
-                                <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-                                    {itemImage ? (
-                                        <Image source={{ uri: itemImage }} style={styles.previewImg} />
-                                    ) : (
-                                        <>
-                                            <Ionicons name="camera-outline" size={28} color="#666" />
-                                            <Text style={styles.imagePickerText}>Select Photo</Text>
-                                        </>
-                                    )}
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[styles.saveButton, loading && { opacity: 0.7 }]}
-                                    onPress={handleAction}
-                                    disabled={loading}
-                                >
-                                    {loading ? (
-                                        <ActivityIndicator color="#fff" />
-                                    ) : (
-                                        <Text style={styles.saveButtonText}>
-                                            {editingId ? "Save Changes" : "Add Item"}
-                                        </Text>
-                                    )}
-                                </TouchableOpacity>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         </ScrollView>
                     </KeyboardAvoidingView>
@@ -638,31 +623,41 @@ const styles = StyleSheet.create({
         flexDirection: "row",
     },
     sidebar: {
-        width: "22%",
-        backgroundColor: "#fff",
+        width: "25%",
+        backgroundColor: "#f8f9fa",
+        paddingVertical: 10,
         borderRightWidth: 1,
-        borderColor: "#eee",
+        borderColor: "#e0e0e0",
     },
     sidebarItem: {
-        paddingVertical: 16,
-        paddingHorizontal: 8,
-        borderBottomWidth: 1,
-        borderColor: "#f5f5f5",
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: "#fff",
+        justifyContent: "center",
         alignItems: "center",
+        marginVertical: 8,
+        alignSelf: "center",
+        borderWidth: 1,
+        borderColor: "#f5f5f5",
+        elevation: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     sidebarItemSelected: {
-        backgroundColor: "#fff5eb",
-        borderRightWidth: 3,
-        borderRightColor: "#ff6600",
+        backgroundColor: "#ff6600",
+        borderColor: "#ff6600",
     },
     sidebarItemText: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: "700",
         color: "#666",
         textAlign: "center",
     },
     sidebarItemTextSelected: {
-        color: "#ff6600",
+        color: "#fff",
         fontWeight: "900",
     },
     itemsGridContainer: {
@@ -919,40 +914,85 @@ const styles = StyleSheet.create({
         color: "#333",
         marginBottom: 6,
     },
-    imagePicker: {
-        height: 120,
+    batchList: {
+        backgroundColor: "#f9f9f9",
         borderRadius: 12,
-        borderWidth: 1.5,
+        padding: 12,
+        marginBottom: 16,
+    },
+    batchItemRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "#fff",
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 8,
+        borderWidth: 1,
         borderColor: "#eee",
+    },
+    batchItemName: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#333",
+    },
+    batchItemDetails: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#666",
+        marginRight: 12,
+    },
+    addMoreBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 12,
+        borderWidth: 1,
         borderStyle: "dashed",
+        borderColor: "#ff6600",
+        borderRadius: 12,
+        marginTop: 8,
+        marginBottom: 16,
+    },
+    addMoreBtnText: {
+        color: "#ff6600",
+        fontSize: 14,
+        fontWeight: "700",
+        marginLeft: 6,
+    },
+    modalActionRow: {
+        flexDirection: "row",
+        gap: 12,
+        marginTop: 10,
+        marginBottom: 30,
+    },
+    cancelActionBtn: {
+        flex: 1,
+        height: 50,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#ccc",
         justifyContent: "center",
         alignItems: "center",
-        overflow: "hidden",
         backgroundColor: "#fafafa",
     },
-    previewImg: {
-        width: "100%",
-        height: "100%",
-        resizeMode: "cover",
-    },
-    imagePickerText: {
-        fontSize: 12,
+    cancelActionBtnText: {
+        fontSize: 16,
+        fontWeight: "700",
         color: "#666",
-        marginTop: 6,
-        fontWeight: "600",
     },
-    saveButton: {
-        height: 56,
+    saveActionBtn: {
+        flex: 2,
+        height: 50,
         backgroundColor: "#ff6600",
         borderRadius: 12,
         justifyContent: "center",
         alignItems: "center",
-        marginTop: 20,
-        marginBottom: 40,
     },
-    saveButtonText: {
+    saveActionBtnText: {
         color: "#fff",
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: "800",
     },
     emptyContainer: {

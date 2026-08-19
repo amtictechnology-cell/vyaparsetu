@@ -1,4 +1,4 @@
-﻿import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useState } from 'react';
 import { BASE_URL } from '../../constants/Config';
@@ -32,13 +32,35 @@ export default function SupplierRateList() {
 
     const getToken = async () => AsyncStorage.getItem('userToken');
 
+    const RATE_CACHE_KEY = 'supplier_rate_list_cache';
+    const RATE_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
     const fetchRateList = useCallback(async (isRefresh = false) => {
         try {
-            if (isRefresh) setRefreshing(true); else setLoadingList(true);
+            if (isRefresh) {
+                setRefreshing(true);
+            } else {
+                const cachedStr = await AsyncStorage.getItem(RATE_CACHE_KEY);
+                if (cachedStr) {
+                    const parsed = JSON.parse(cachedStr);
+                    setRateList(parsed.data);
+                    setLoadingList(false);
+                    if (Date.now() - parsed.timestamp < RATE_CACHE_TTL) {
+                        return;
+                    }
+                }
+                setLoadingList(true);
+            }
             const token = await getToken();
             const res = await fetch(`${BASE_URL}/supplier/rate-list`, { headers: { Authorization: `Bearer ${token}` } });
             const data = await res.json();
-            if (res.ok && data.data?.items) setRateList(data.data.items);
+            if (res.ok && data.data?.items) {
+                setRateList(data.data.items);
+                await AsyncStorage.setItem(RATE_CACHE_KEY, JSON.stringify({
+                    data: data.data.items,
+                    timestamp: Date.now()
+                }));
+            }
         } catch (e) { console.error('Fetch rate list error', e); }
         finally { setLoadingList(false); setRefreshing(false); }
     }, []);
@@ -66,7 +88,15 @@ export default function SupplierRateList() {
                 setNewItemName('');
                 setNewItemPrice('');
                 Alert.alert('Saved', data.message || 'Item save ho gaya!');
-                data.data?.items ? setRateList(data.data.items) : fetchRateList();
+                if (data.data?.items) {
+                    setRateList(data.data.items);
+                    await AsyncStorage.setItem(RATE_CACHE_KEY, JSON.stringify({
+                        data: data.data.items,
+                        timestamp: Date.now()
+                    }));
+                } else {
+                    fetchRateList();
+                }
             } else { Alert.alert('Error', data.message || 'Kuch gadbad ho gayi.'); }
         } catch { Alert.alert('Network Error', 'Server se connect nahi ho pa raha.'); }
         finally { setSaving(false); }
@@ -91,7 +121,15 @@ export default function SupplierRateList() {
             if (res.ok && data.success) {
                 setEditModalVisible(false);
                 Alert.alert('Updated', data.message || 'Item update ho gaya!');
-                data.data?.items ? setRateList(data.data.items) : fetchRateList();
+                if (data.data?.items) {
+                    setRateList(data.data.items);
+                    await AsyncStorage.setItem(RATE_CACHE_KEY, JSON.stringify({
+                        data: data.data.items,
+                        timestamp: Date.now()
+                    }));
+                } else {
+                    fetchRateList();
+                }
             } else { Alert.alert('Error', data.message || 'Update nahi hua.'); }
         } catch { Alert.alert('Network Error', 'Server se connect nahi ho pa raha.'); }
         finally { setUpdating(false); }

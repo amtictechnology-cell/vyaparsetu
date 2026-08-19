@@ -174,13 +174,16 @@ export default function BillGenerateScreen() {
     // Dropdown for item autocomplete suggestions per row
     const [activeRowDropdownIndex, setActiveRowDropdownIndex] = useState<number | null>(null);
 
-    // Bill Details Modal (viewing from Bills History tab)
     const [billDetailsModalVisible, setBillDetailsModalVisible] = useState(false);
     const [viewingBill, setViewingBill] = useState<Bill | null>(null);
 
     // Delete Confirmation
     const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
     const [billIdToDelete, setBillIdToDelete] = useState<string | null>(null);
+
+    // Offers logic
+    const [offers, setOffers] = useState<any[]>([]);
+    const [earnedDiscount, setEarnedDiscount] = useState<number>(0);
 
     const showToast = (msg: string) => {
         setToastMessage(msg);
@@ -194,13 +197,33 @@ export default function BillGenerateScreen() {
         else setLoading(true);
 
         try {
+            if (!isRefreshing) {
+                const cachedDataStr = await AsyncStorage.getItem('cachedCustomers_bill');
+                const cachedTimeStr = await AsyncStorage.getItem('cachedCustomersTime_bill');
+                
+                if (cachedDataStr && cachedTimeStr) {
+                    const cachedTime = parseInt(cachedTimeStr, 10);
+                    const now = new Date().getTime();
+                    const threeMinutes = 3 * 60 * 1000;
+                    
+                    if (now - cachedTime < threeMinutes) {
+                        setCustomers(JSON.parse(cachedDataStr));
+                        setLoading(false);
+                        return; // Use cache, skip API call
+                    }
+                }
+            }
+
             const token = await AsyncStorage.getItem("userToken");
             const response = await fetch(`${BASE_URL}/hotel/bill-customers`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
             const data = await response.json();
             if (response.ok) {
-                setCustomers(data.data || data.customers || (Array.isArray(data) ? data : []));
+                const customersList = data.data || data.customers || (Array.isArray(data) ? data : []);
+                setCustomers(customersList);
+                await AsyncStorage.setItem('cachedCustomers_bill', JSON.stringify(customersList));
+                await AsyncStorage.setItem('cachedCustomersTime_bill', new Date().getTime().toString());
             } else {
                 Alert.alert("Error", data.message || "Failed to fetch billing customers.");
             }
@@ -250,10 +273,26 @@ export default function BillGenerateScreen() {
         }
     };
 
+    const fetchOffers = async () => {
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(`${BASE_URL}/hotel/get-offers`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setOffers(data.data || data.offers || []);
+            }
+        } catch (error) {
+            console.error("Fetch offers error:", error);
+        }
+    };
+
     useEffect(() => {
         fetchCustomers();
         fetchBills();
         fetchMenuItems();
+        fetchOffers();
     }, []);
 
     const onRefresh = () => {
@@ -355,18 +394,23 @@ export default function BillGenerateScreen() {
 
     // ── Bill Builder Operations ────────────────────────────────────────────
 
-    const openBillBuilderForCreate = (cust: BillingCustomer) => {
+    const openBillBuilderForCreate = async (cust: BillingCustomer) => {
         setSelectedCustomer(cust);
         setEditingBillId(null);
         setPaymentStatus("done");
         setNotes("");
         setHistoryExpanded(false);
         setCart({});
+        
+        // Fetch any earned discount for this customer
+        const storedDiscount = await AsyncStorage.getItem(`discount_earned_${cust.customerId || cust._id}`);
+        setEarnedDiscount(storedDiscount ? Number(storedDiscount) : 0);
+
         fetchCustomerBillsHistory(cust.customerId || cust._id);
         setBillModalVisible(true);
     };
 
-    const openBillBuilderForEdit = (bill: Bill) => {
+    const openBillBuilderForEdit = async (bill: Bill) => {
         const custObj = typeof bill.customerId === 'object' ? bill.customerId : { _id: bill.customerId, customerName: bill.customerName || "Customer", mobileNumber: "" };
         const cust: BillingCustomer = {
             _id: custObj._id,
@@ -388,6 +432,9 @@ export default function BillGenerateScreen() {
         }
         setCart(initialCart);
 
+        const storedDiscount = await AsyncStorage.getItem(`discount_earned_${custObj._id}`);
+        setEarnedDiscount(storedDiscount ? Number(storedDiscount) : 0);
+
         fetchCustomerBillsHistory(custObj._id);
         setBillModalVisible(true);
     };
@@ -408,6 +455,8 @@ export default function BillGenerateScreen() {
 
         if (!selectedCustomer) return;
 
+        const finalGrandTotal = Math.max(0, cartTotal - earnedDiscount);
+
         setLoading(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
@@ -418,7 +467,10 @@ export default function BillGenerateScreen() {
 
             const bodyData: any = {
                 paymentStatus,
-                items: validItems
+                items: validItems,
+                discount: earnedDiscount,
+                discountAmount: earnedDiscount,
+                grandTotal: finalGrandTotal
             };
 
             if (editingBillId) {
@@ -442,12 +494,35 @@ export default function BillGenerateScreen() {
 
             const data = await response.json();
             if (response.ok) {
-                showToast(editingBillId ? "Bill updated successfully" : "Bill created successfully");
+                if (earnedDiscount > 0) {
+                    await AsyncStorage.removeItem(`discount_earned_${cId}`);
+                }
+
+                let applicableOffer = null;
+                for (const offer of [...offers].sort((a,b) => b.amount - a.amount)) {
+                    if (cartTotal >= offer.amount) {
+                        applicableOffer = offer;
+                        break;
+                    }
+                }
+
+                if (applicableOffer) {
+                    await AsyncStorage.setItem(`discount_earned_${cId}`, applicableOffer.discountAmount.toString());
+                    Alert.alert(
+                        "Offer Applied! 🎉",
+                        `Bill amount crossed ₹${applicableOffer.amount}.\nCustomer gets ₹${applicableOffer.discountAmount} discount on their NEXT visit!`,
+                        [{ text: "Awesome!" }]
+                    );
+                } else {
+                    showToast(editingBillId ? "Bill updated successfully" : "Bill created successfully");
+                }
+
                 setBillModalVisible(false);
                 setBillSummaryVisible(false);
                 setEditingBillId(null);
                 setCart({});
                 setNotes("");
+                setEarnedDiscount(0);
                 fetchBills();
             } else {
                 Alert.alert("Error", data.message || "Failed to save bill.");
@@ -596,29 +671,30 @@ export default function BillGenerateScreen() {
     const renderCustomerItem = ({ item }: { item: BillingCustomer }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
-                <View style={styles.avatar}>
-                    <Ionicons name="person" size={24} color="#ff6600" />
+                <View style={[styles.avatar, { backgroundColor: "#ff6600" }]}>
+                    <Text style={styles.avatarText}>{getCustomerInitial(item.customerName)}</Text>
                 </View>
                 <View style={styles.cardInfo}>
                     <Text style={styles.customerName}>{item.customerName}</Text>
                     <Text style={styles.mobileNumber}>{item.mobileNumber}</Text>
                 </View>
-                <View style={styles.customerActions}>
-                    <TouchableOpacity 
-                        style={[styles.actionBtnIcon, { backgroundColor: "#fff0e6" }]} 
-                        onPress={() => openBillBuilderForCreate(item)}
-                    >
-                        <Ionicons name="receipt-outline" size={18} color="#ff6600" />
-                        <Text style={[styles.actionBtnText, { color: "#ff6600" }]}>Bill</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[styles.actionBtnIcon, { backgroundColor: "#e6f0ff" }]} 
-                        onPress={() => handleViewCustomerBills(item)}
-                    >
-                        <Ionicons name="eye-outline" size={18} color="#0059ff" />
-                        <Text style={[styles.actionBtnText, { color: "#0059ff" }]}>History</Text>
-                    </TouchableOpacity>
-                </View>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.customerActions}>
+                <TouchableOpacity 
+                    style={[styles.actionBtnIcon, { backgroundColor: "#fff0e6", flex: 1, justifyContent: "center" }]} 
+                    onPress={() => openBillBuilderForCreate(item)}
+                >
+                    <Ionicons name="receipt-outline" size={18} color="#ff6600" />
+                    <Text style={[styles.actionBtnText, { color: "#ff6600" }]}>Create Bill</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.actionBtnIcon, { backgroundColor: "#e6f0ff", flex: 1, justifyContent: "center" }]} 
+                    onPress={() => handleViewCustomerBills(item)}
+                >
+                    <Ionicons name="eye-outline" size={18} color="#0059ff" />
+                    <Text style={[styles.actionBtnText, { color: "#0059ff" }]}>View History</Text>
+                </TouchableOpacity>
             </View>
         </View>
     );
@@ -629,7 +705,7 @@ export default function BillGenerateScreen() {
 
         return (
             <TouchableOpacity 
-                style={styles.card} 
+                style={[styles.card, { marginBottom: 6, paddingVertical: 10 }]} 
                 onPress={() => {
                     setViewingBill(item);
                     setBillDetailsModalVisible(true);
@@ -637,14 +713,13 @@ export default function BillGenerateScreen() {
             >
                 <View style={styles.cardHeader}>
                     <View style={styles.cardInfo}>
-                        <Text style={styles.customerName}>{custName}</Text>
                         <View style={styles.billMetaRow}>
-                            <Text style={styles.billMetaText}>{dateStr}</Text>
+                            <Text style={[styles.billMetaText, { fontSize: 15, fontWeight: "700", color: "#ff6600" }]}>{dateStr}</Text>
                             <Text style={styles.billMetaText}>· {item.items?.length || 0} Items</Text>
                         </View>
                     </View>
                     <View style={styles.billRight}>
-                        <Text style={styles.grandTotalText}>₹{item.grandTotal}</Text>
+                        <Text style={[styles.grandTotalText, { color: "#0059ff" }]}>₹{item.grandTotal}</Text>
                         <TouchableOpacity 
                             onPress={() => handleTogglePaymentStatus(item)}
                             style={[
@@ -719,6 +794,12 @@ export default function BillGenerateScreen() {
             {activeTab === "bills" && (
                 <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 16, marginBottom: 12 }}>
                     <TouchableOpacity 
+                        style={[{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: "#ddd" }, activeFilter === "all" && { backgroundColor: "#fff0e6", borderColor: "#ff6600" }]}
+                        onPress={() => setActiveFilter("all")}
+                    >
+                        <Text style={[{ fontSize: 14, color: "#666", fontWeight: "600" }, activeFilter === "all" && { color: "#ff6600" }]}>All</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
                         style={[{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: "#ddd" }, activeFilter === "today" && { backgroundColor: "#fff0e6", borderColor: "#ff6600" }]}
                         onPress={() => setActiveFilter(activeFilter === "today" ? "all" : "today")}
                     >
@@ -760,7 +841,7 @@ export default function BillGenerateScreen() {
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             {loading ? (
-                                <ActivityIndicator size="large" color="#0c831f" />
+                                <ActivityIndicator size="large" color="#ff6600" />
                             ) : (
                                 <Text style={styles.emptyText}>No customers found</Text>
                             )}
@@ -779,7 +860,7 @@ export default function BillGenerateScreen() {
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             {loading ? (
-                                <ActivityIndicator size="large" color="#0c831f" />
+                                <ActivityIndicator size="large" color="#ff6600" />
                             ) : (
                                 <Text style={styles.emptyText}>No bills found</Text>
                             )}
@@ -864,18 +945,34 @@ export default function BillGenerateScreen() {
                     {/* Main Split Content */}
                     <View style={{ flex: 1, flexDirection: "row" }}>
                         {/* Sidebar Categories */}
-                        <View style={{ width: 85, backgroundColor: "#fff", borderRightWidth: 1, borderColor: "#eee" }}>
+                        <View style={{ width: 110, backgroundColor: "#fff", borderRightWidth: 1, borderColor: "#eee" }}>
                             <ScrollView showsVerticalScrollIndicator={false}>
                                 {categories.map(cat => (
                                     <TouchableOpacity
                                         key={cat}
                                         style={[
-                                            { paddingVertical: 16, alignItems: "center", borderBottomWidth: 1, borderColor: "#f0f0f0" },
-                                            selectedCategory === cat && { backgroundColor: "#fff0e6", borderRightWidth: 3, borderColor: "#ff6600" }
+                                            { 
+                                                marginVertical: 8,
+                                                width: 80,
+                                                height: 80,
+                                                borderRadius: 40,
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                alignSelf: "center",
+                                                backgroundColor: "#f8f9fa",
+                                            },
+                                            selectedCategory === cat && { 
+                                                backgroundColor: "#ff6600",
+                                            }
                                         ]}
                                         onPress={() => setSelectedCategory(cat)}
                                     >
-                                        <Text style={{ fontSize: 12, fontWeight: selectedCategory === cat ? "800" : "600", color: selectedCategory === cat ? "#ff6600" : "#666", textAlign: "center" }}>
+                                        <Text style={{ 
+                                            fontSize: 11, 
+                                            fontWeight: selectedCategory === cat ? "800" : "600", 
+                                            color: selectedCategory === cat ? "#fff" : "#555", 
+                                            textAlign: "center" 
+                                        }}>
                                             {cat}
                                         </Text>
                                     </TouchableOpacity>
@@ -939,7 +1036,9 @@ export default function BillGenerateScreen() {
                         <View style={{ position: "absolute", bottom: 20, left: 16, right: 16, backgroundColor: "#0059ff", borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, elevation: 5, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 5 }}>
                             <View>
                                 <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: "600" }}>{cartItemCount} Items</Text>
-                                <Text style={{ color: "#fff", fontSize: 18, fontWeight: "900" }}>₹{cartTotal}</Text>
+                                <Text style={{ color: "#fff", fontSize: 18, fontWeight: "900" }}>
+                                    ₹{Math.max(0, cartTotal - earnedDiscount)}
+                                </Text>
                             </View>
                             <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#0047cc", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 }} onPress={() => setBillSummaryVisible(true)}>
                                 <Text style={{ color: "#fff", fontSize: 15, fontWeight: "800", marginRight: 4 }}>View Cart</Text>
@@ -976,9 +1075,18 @@ export default function BillGenerateScreen() {
                                     <Text style={{ fontSize: 16, fontWeight: "800", color: "#111" }}>₹{details.qty * details.price}</Text>
                                 </View>
                             ))}
+                            {earnedDiscount > 0 && (
+                                <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1, borderColor: "#eee" }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{ fontSize: 15, fontWeight: "700", color: "#0c831f" }}>Previous Visit Discount</Text>
+                                        <Text style={{ fontSize: 13, color: "#666", marginTop: 2 }}>Offer applied</Text>
+                                    </View>
+                                    <Text style={{ fontSize: 16, fontWeight: "800", color: "#0c831f" }}>-₹{earnedDiscount}</Text>
+                                </View>
+                            )}
                             <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 16, marginTop: 8 }}>
                                 <Text style={{ fontSize: 18, fontWeight: "900", color: "#333" }}>Grand Total</Text>
-                                <Text style={{ fontSize: 22, fontWeight: "900", color: "#ff6600" }}>₹{cartTotal}</Text>
+                                <Text style={{ fontSize: 22, fontWeight: "900", color: "#ff6600" }}>₹{Math.max(0, cartTotal - earnedDiscount)}</Text>
                             </View>
                         </ScrollView>
 
@@ -1241,64 +1349,73 @@ const styles = StyleSheet.create({
         fontWeight: "600",
     },
     listContent: {
-        paddingHorizontal: 10,
+        paddingHorizontal: 0,
         paddingTop: 10,
         paddingBottom: 100,
     },
     card: {
         backgroundColor: "#fff",
-        borderRadius: 10,
+        borderRadius: 6,
         paddingVertical: 12,
-        paddingHorizontal: 12,
-        marginBottom: 10,
-        elevation: 2,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
+        paddingHorizontal: 10,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: "#f2f2f2",
     },
     cardHeader: {
         flexDirection: "row",
         alignItems: "center",
+        marginBottom: 12,
     },
     avatar: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: "#fff0e6",
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: "#ff6600",
         justifyContent: "center",
         alignItems: "center",
-        marginRight: 12,
+        marginRight: 14,
+    },
+    avatarText: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#fff",
     },
     cardInfo: {
         flex: 1,
     },
     customerName: {
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: "800",
-        color: "#333",
+        color: "#222",
+        letterSpacing: -0.3,
     },
     mobileNumber: {
-        fontSize: 13,
+        fontSize: 14,
         color: "#666",
         fontWeight: "600",
-        marginTop: 2,
+        marginTop: 4,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: "#f2f2f2",
+        marginBottom: 12,
     },
     customerActions: {
         flexDirection: "row",
-        gap: 8,
+        gap: 12,
     },
     actionBtnIcon: {
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 10,
-        gap: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 12,
+        gap: 6,
     },
     actionBtnText: {
-        fontSize: 12,
-        fontWeight: "800",
+        fontSize: 14,
+        fontWeight: "700",
     },
     billMetaRow: {
         flexDirection: "row",

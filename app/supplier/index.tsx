@@ -1,4 +1,4 @@
-﻿import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
 import { SERVER_URL } from '../../constants/Config';
 import {
@@ -28,13 +28,44 @@ export default function SupplierScreen() {
 
     const fetchSettings = async (categoryName: string) => {
         try {
+            const cacheKey = `supplier_header_settings_cache_${categoryName.toLowerCase()}`;
+            const cachedDataStr = await AsyncStorage.getItem(cacheKey);
+            
+            if (cachedDataStr) {
+                const cachedData = JSON.parse(cachedDataStr);
+                const now = new Date().getTime();
+                // Check if cache is less than 20 minutes old (20 * 60 * 1000 ms)
+                if (now - cachedData.timestamp < 1200000) {
+                    setSettings(cachedData.data);
+                    return;
+                }
+            }
+
             const response = await fetch(`${SERVER_URL}/api/v1/settings/app/${categoryName.toLowerCase()}`);
             const data = await response.json();
             if (response.ok && data.success) {
                 setSettings(data.data);
+                
+                // Save to cache
+                const cacheObject = {
+                    timestamp: new Date().getTime(),
+                    data: data.data
+                };
+                await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheObject));
             }
         } catch (error) {
             console.error("Error fetching settings:", error);
+            // Fallback to cache if offline or error
+            try {
+                const cacheKey = `supplier_header_settings_cache_${categoryName.toLowerCase()}`;
+                const cachedDataStr = await AsyncStorage.getItem(cacheKey);
+                if (cachedDataStr) {
+                    const cachedData = JSON.parse(cachedDataStr);
+                    setSettings(cachedData.data);
+                }
+            } catch (e) {
+                console.error("Error loading cached settings:", e);
+            }
         }
     };
 
@@ -123,12 +154,6 @@ export default function SupplierScreen() {
                             </Text>
                         </View>
                     </View>
-                    <TouchableOpacity
-                        style={[styles.menuButton, { backgroundColor: menuBtnBg, borderRadius: 24 }]}
-                        onPress={() => router.push('/supplier/menu')}
-                    >
-                        <Ionicons name="person-circle-outline" size={38} color={menuIconColor} />
-                    </TouchableOpacity>
                 </View>
             </View>
 

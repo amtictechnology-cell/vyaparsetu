@@ -146,6 +146,7 @@ export default function HomeScreen() {
                 if (response.ok && data.success) {
                     const settingsData = Array.isArray(data.data) ? data.data[0] : data.data;
                     setSettings(settingsData);
+                    await AsyncStorage.setItem('cachedSettings', JSON.stringify(settingsData));
                 }
             } catch (error) {
                 console.error("Error fetching settings:", error);
@@ -154,6 +155,24 @@ export default function HomeScreen() {
 
         const fetchProfile = async () => {
             try {
+                // Try loading from cache first for smooth UI
+                const cachedProfileStr = await AsyncStorage.getItem('cachedProfile');
+                const cachedSettingsStr = await AsyncStorage.getItem('cachedSettings');
+                
+                let hasCache = false;
+                if (cachedProfileStr) {
+                    setProfile(JSON.parse(cachedProfileStr));
+                    hasCache = true;
+                }
+                if (cachedSettingsStr) {
+                    setSettings(JSON.parse(cachedSettingsStr));
+                    hasCache = true;
+                }
+                
+                if (hasCache) {
+                    setLoading(false);
+                }
+
                 const token = await AsyncStorage.getItem("userToken");
                 if (token) {
                     const response = await fetch(`${BASE_URL}/user/profile`, {
@@ -165,6 +184,7 @@ export default function HomeScreen() {
                     const data = await response.json();
                     if (response.ok && data.user) {
                         setProfile(data.user);
+                        await AsyncStorage.setItem('cachedProfile', JSON.stringify(data.user));
                         const categoryName = (data.user.businessCategory || "hotel").toLowerCase();
                         fetchSettings(categoryName);
                     }
@@ -226,9 +246,6 @@ export default function HomeScreen() {
                             <Text style={[styles.locationText, { color: textSecondary }]}>{profile?.name || "User Name"}</Text>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.settingsButton} onPress={() => router.push("/settings")}>
-                        <Ionicons name="settings-outline" size={26} color={settingsIconColor} />
-                    </TouchableOpacity>
                 </View>
 
                 {/* Bottom Row: Animated Powered By (Only show if not playing a video to keep header compact) */}
@@ -313,8 +330,6 @@ export default function HomeScreen() {
                     <MaterialCommunityIcons name="trending-up" size={40} color="#0c831f" />
                 </Animated.View>
             </ScrollView>
-
-
         </View>
     );
 }
@@ -417,11 +432,7 @@ const styles = StyleSheet.create({
         color: "#444",
         fontWeight: "700",
     },
-    settingsButton: {
-        padding: 8,
-        borderRadius: 20,
-        backgroundColor: "rgba(255, 255, 255, 0.35)",
-    },
+
     scrollContent: {
         padding: 20,
     },

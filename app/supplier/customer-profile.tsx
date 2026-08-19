@@ -99,6 +99,9 @@ export default function CustomerProfile() {
 
     useEffect(() => { if (customerId) { fetchCustomerDetail(); fetchBills(); fetchPayments(); } }, [customerId, fetchCustomerDetail]);
 
+    const RATE_CACHE_KEY = 'supplier_rate_list_cache';
+    const RATE_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
     // Open Modal and Fetch Rate List
     const handleOpenBillModal = async () => {
         setCart([]); // reset cart
@@ -108,10 +111,26 @@ export default function CustomerProfile() {
         setAddBillModalVisible(true);
         setRateLoading(true);
         try {
+            const cachedStr = await AsyncStorage.getItem(RATE_CACHE_KEY);
+            if (cachedStr) {
+                const parsed = JSON.parse(cachedStr);
+                setRateList(parsed.data);
+                if (Date.now() - parsed.timestamp < RATE_CACHE_TTL) {
+                    setRateLoading(false);
+                    return;
+                }
+            }
             const token = await getToken();
             const res = await fetch(`${BASE_URL}/supplier/rate-list`, { headers: { Authorization: `Bearer ${token}` } });
             const data = await res.json();
-            if (res.ok) setRateList(data.data?.items || []);
+            if (res.ok) {
+                const items = data.data?.items || [];
+                setRateList(items);
+                await AsyncStorage.setItem(RATE_CACHE_KEY, JSON.stringify({
+                    data: items,
+                    timestamp: Date.now()
+                }));
+            }
         } catch (e) { Alert.alert('Error', 'Could not load rate list'); }
         finally { setRateLoading(false); }
     };

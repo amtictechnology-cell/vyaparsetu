@@ -54,7 +54,7 @@ export default function LandingPage() {
         const user = data?.user;
 
         if (user) {
-          const category = (user.businessCategory || "").toLowerCase();
+          const category = (user.businessCategory || "").toLowerCase().trim();
 
           if (!category) {
             // Token is valid, but profile is incomplete
@@ -91,9 +91,8 @@ export default function LandingPage() {
       resizeMode="cover"
     >
       <Animated.View style={[styles.mainContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <Animated.Text style={styles.text}>
-          <Animated.Text style={styles.vyaparText}>Vyapar</Animated.Text>
-          <Animated.Text style={styles.setuText}>Setu</Animated.Text>
+        <Animated.Text style={[styles.text, styles.atithiText]}>
+          Atithi
         </Animated.Text>
         <Animated.Text style={styles.tagline}>
           Digital Solution for Your Business
@@ -124,10 +123,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: -1,
   },
-  vyaparText: {
-    color: "#0059ff",
-  },
-  setuText: {
+  atithiText: {
     color: "#ff6600",
   },
   tagline: {

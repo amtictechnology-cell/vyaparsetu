@@ -52,7 +52,7 @@ export default function CategorySelectScreen() {
           if (data?.token) {
             await AsyncStorage.setItem("userToken", data.token);
           }
-          const finalCategory = (data?.user?.businessCategory || apiCategory).toLowerCase();
+          const finalCategory = (data?.user?.businessCategory || apiCategory).toLowerCase().trim();
           const isSubscribed = await AsyncStorage.getItem("isSubscribed");
           if (isSubscribed === "true") {
             if (finalCategory === "shop") {

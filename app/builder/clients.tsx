@@ -32,7 +32,7 @@ export default function ClientsScreen() {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem('userToken');
-      const response = await fetch(`${BASE_URL}/builder/clients`, {
+      const response = await fetch(`${BASE_URL}/builder/client`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`

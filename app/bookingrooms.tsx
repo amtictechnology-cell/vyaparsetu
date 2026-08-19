@@ -120,6 +120,23 @@ export default function BookingRooms() {
         if (isRefreshing) setRefreshing(true);
         else setLoading(true);
         try {
+            if (!isRefreshing) {
+                const cachedDataStr = await AsyncStorage.getItem('cachedCustomers_booking');
+                const cachedTimeStr = await AsyncStorage.getItem('cachedCustomersTime_booking');
+                
+                if (cachedDataStr && cachedTimeStr) {
+                    const cachedTime = parseInt(cachedTimeStr, 10);
+                    const now = new Date().getTime();
+                    const fourMinutes = 4 * 60 * 1000;
+                    
+                    if (now - cachedTime < fourMinutes) {
+                        setBookings(JSON.parse(cachedDataStr));
+                        setLoading(false);
+                        return;
+                    }
+                }
+            }
+
             const token = await AsyncStorage.getItem("userToken");
             const response = await fetch(`${BASE_URL}/hotel/get-all-customers`, {
                 headers: {
@@ -129,6 +146,8 @@ export default function BookingRooms() {
             const data = await response.json();
             if (data.status === "success") {
                 setBookings(data.data);
+                await AsyncStorage.setItem('cachedCustomers_booking', JSON.stringify(data.data));
+                await AsyncStorage.setItem('cachedCustomersTime_booking', new Date().getTime().toString());
             }
         } catch (error) {
             console.error("Fetch error:", error);
@@ -339,7 +358,7 @@ export default function BookingRooms() {
                     {item.idPhotos?.front ? (
                         <Image source={{ uri: `${BASE_URL}/${item.idPhotos.front}` }} style={styles.avatarImg} />
                     ) : (
-                        <Ionicons name="person" size={24} color="#666" />
+                        <Ionicons name="person" size={24} color="#ff6600" />
                     )}
                 </View>
                 <View style={styles.cardInfo}>
@@ -564,11 +583,11 @@ const styles = StyleSheet.create({
     searchInput: { flex: 1, marginLeft: 8, fontSize: 16, fontWeight: "600" },
     listContent: { paddingBottom: 100 },
     card: {
-        backgroundColor: "#f4feffff",
+        backgroundColor: "#fff",
         padding: 16,
         marginBottom: 2,
         elevation: 3,
-        shadowColor: "#f7f444ff",
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -578,7 +597,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: "#e7f9ffff",
+        backgroundColor: "#fff0e6",
         justifyContent: "center",
         alignItems: "center",
         marginRight: 12,

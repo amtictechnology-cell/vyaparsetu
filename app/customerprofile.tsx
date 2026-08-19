@@ -53,15 +53,37 @@ export default function CustomerProfile() {
     const [allBookings, setAllBookings] = useState<BookingEntry[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const fetchBookings = async () => {
+    const fetchBookings = async (forceRefresh = false) => {
         setLoading(true);
         try {
+            if (!forceRefresh) {
+                const cachedDataStr = await AsyncStorage.getItem('cachedAllBookings_profile');
+                const cachedTimeStr = await AsyncStorage.getItem('cachedAllBookingsTime_profile');
+                
+                if (cachedDataStr && cachedTimeStr) {
+                    const cachedTime = parseInt(cachedTimeStr, 10);
+                    const now = new Date().getTime();
+                    const fiveMinutes = 5 * 60 * 1000;
+                    
+                    if (now - cachedTime < fiveMinutes) {
+                        const allData = JSON.parse(cachedDataStr);
+                        const filtered = allData.filter((b: any) => b.customerId === customer.id);
+                        setAllBookings(filtered);
+                        setLoading(false);
+                        return;
+                    }
+                }
+            }
+
             const token = await AsyncStorage.getItem("userToken");
             const response = await fetch(`${BASE_URL}/hotel/get-all-bookings`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
             if (data.status === "success") {
+                await AsyncStorage.setItem('cachedAllBookings_profile', JSON.stringify(data.data));
+                await AsyncStorage.setItem('cachedAllBookingsTime_profile', new Date().getTime().toString());
+                
                 // Filter bookings for this specific customer
                 const filtered = data.data.filter((b: any) => b.customerId === customer.id);
                 setAllBookings(filtered);
@@ -126,7 +148,7 @@ export default function CustomerProfile() {
             if (data.status === "success") {
                 showToast("Booking deleted");
                 setShowBookingDeleteConfirm(false);
-                fetchBookings();
+                fetchBookings(true);
             } else {
                 showToast(data.message || "Delete failed");
             }
@@ -153,7 +175,7 @@ export default function CustomerProfile() {
             if (data.status === "success" || response.ok) {
                 showToast("Checked out successfully");
                 setShowCheckoutConfirm(false);
-                fetchBookings();
+                fetchBookings(true);
             } else {
                 showToast(data.message || "Checkout failed");
             }
@@ -186,7 +208,8 @@ export default function CustomerProfile() {
             if (data.status === "success") {
                 showToast("Room booked successfully");
                 setShowSingleModal(false);
-                fetchBookings();
+                // Refresh bookings
+                fetchBookings(true);
             } else {
                 showToast(data.message || "Booking failed");
             }

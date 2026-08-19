@@ -69,7 +69,7 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.header}>
-            <Text style={styles.title}>Vyapar<Text style={styles.setuText}>Setu</Text></Text>
+            <Text style={styles.title}>Atithi</Text>
             <Text style={styles.subtitle}>{"India's No. 1 Business App"}</Text>
           </View>
 
@@ -142,11 +142,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 38,
     fontWeight: "900",
-    color: "#0059ff",
-    letterSpacing: -1,
-  },
-  setuText: {
     color: "#ff6600",
+    letterSpacing: -1,
   },
   subtitle: {
     fontSize: 15,
