@@ -74,7 +74,11 @@ export default function SettingsScreen() {
                             
                             // Save it back to AsyncStorage to keep it in sync (optional but good practice)
                             await AsyncStorage.setItem("selectedPlan", JSON.stringify(fetchedPlan));
-                            await AsyncStorage.setItem("planActivatedAt", currentProfile.activeSubscription.activatedAt);
+                            if (currentProfile.activeSubscription.activatedAt) {
+                                await AsyncStorage.setItem("planActivatedAt", currentProfile.activeSubscription.activatedAt);
+                            } else {
+                                await AsyncStorage.removeItem("planActivatedAt");
+                            }
                             
                             setLoading(false);
                             return; // Stop here, we got the active plan directly from profile

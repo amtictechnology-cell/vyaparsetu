@@ -77,12 +77,8 @@ export default function OTPScreen() {
               if (hasActivePlan) {
                 if (category === "shop") {
                   router.replace("/Shop" as any);
-                } else if (category === "supplier" || category === "suppliers") {
-                  router.replace("/supplier" as any);
                 } else if (category === "printing") {
                   router.replace("/printing" as any);
-                } else if (category === "builder") {
-                  router.replace("/builder" as any);
                 } else {
                   router.replace("/home" as any);
                 }

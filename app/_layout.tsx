@@ -35,29 +35,7 @@ export default function RootLayout() {
 
       {showFooter && (
         <View style={styles.footer}>
-          {pathname.startsWith("/supplier") ? (
-            <>
-              <TouchableOpacity style={styles.footerTab} onPress={() => router.push("/supplier" as any)}>
-                <Ionicons name="home" size={24} color={pathname === "/supplier" ? "#ff6600" : "#666"} />
-                <Text style={[styles.footerTabText, { color: pathname === "/supplier" ? "#ff6600" : "#666" }]}>Home</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.footerTab} onPress={() => router.push("/supplier/settings" as any)}>
-                <Ionicons name="settings-outline" size={24} color={pathname === "/supplier/settings" ? "#ff6600" : "#666"} />
-                <Text style={[styles.footerTabText, { color: pathname === "/supplier/settings" ? "#ff6600" : "#666" }]}>Settings</Text>
-              </TouchableOpacity>
-            </>
-          ) : pathname.startsWith("/builder") ? (
-            <>
-              <TouchableOpacity style={styles.footerTab} onPress={() => router.push("/builder" as any)}>
-                <Ionicons name="home" size={24} color={pathname === "/builder" ? "#ff6600" : "#666"} />
-                <Text style={[styles.footerTabText, { color: pathname === "/builder" ? "#ff6600" : "#666" }]}>Home</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.footerTab} onPress={() => router.push("/builder/settings" as any)}>
-                <Ionicons name="settings-outline" size={24} color={pathname === "/builder/settings" ? "#ff6600" : "#666"} />
-                <Text style={[styles.footerTabText, { color: pathname === "/builder/settings" ? "#ff6600" : "#666" }]}>Settings</Text>
-              </TouchableOpacity>
-            </>
-          ) : pathname.startsWith("/Shop") || pathname.startsWith("/shop") ? (
+          {pathname.startsWith("/Shop") || pathname.startsWith("/shop") ? (
             <>
               <TouchableOpacity style={styles.footerTab} onPress={() => router.push("/Shop" as any)}>
                 <Ionicons name="home" size={24} color={pathname.toLowerCase() === "/shop" ? "#ff6600" : "#666"} />

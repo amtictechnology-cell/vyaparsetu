@@ -19,7 +19,7 @@ interface ActivePlanCardProps {
 }
 
 export default function ActivePlanCard({ plan, activatedAtString }: ActivePlanCardProps) {
-  if (!plan) {
+  if (!plan || plan.status === 'none' || !plan.planId) {
     return (
       <View style={styles.card}>
         <View style={styles.headerRow}>

@@ -14,7 +14,7 @@ export default function LandingPage() {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 3000,
+        duration: 2000,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
@@ -26,8 +26,8 @@ export default function LandingPage() {
     ]).start();
 
     const checkLoginStatus = async () => {
-      // Wait 3 seconds so the landing page animation can finish
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Wait 2 seconds so the landing page animation can finish
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       try {
         const token = await AsyncStorage.getItem("userToken");
@@ -64,12 +64,8 @@ export default function LandingPage() {
             router.replace("/plans" as any);
           } else if (category === "shop") {
             router.replace("/Shop" as any);
-          } else if (category === "supplier" || category === "suppliers") {
-            router.replace("/supplier" as any);
           } else if (category === "printing") {
             router.replace("/printing" as any);
-          } else if (category === "builder") {
-            router.replace("/builder" as any);
           } else {
             router.replace("/home" as any);
           }
@@ -91,8 +87,8 @@ export default function LandingPage() {
       resizeMode="cover"
     >
       <Animated.View style={[styles.mainContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <Animated.Text style={[styles.text, styles.atithiText]}>
-          Atithi
+        <Animated.Text style={[styles.text, styles.innixText]}>
+          Innix
         </Animated.Text>
         <Animated.Text style={styles.tagline}>
           Digital Solution for Your Business
@@ -123,7 +119,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: -1,
   },
-  atithiText: {
+  innixText: {
     color: "#ff6600",
   },
   tagline: {

@@ -71,7 +71,11 @@ export default function ShopSettingsScreen() {
                             setActivatedAt(currentProfile.activeSubscription.activatedAt);
                             
                             await AsyncStorage.setItem("selectedPlan", JSON.stringify(fetchedPlan));
-                            await AsyncStorage.setItem("planActivatedAt", currentProfile.activeSubscription.activatedAt);
+                            if (currentProfile.activeSubscription.activatedAt) {
+                                await AsyncStorage.setItem("planActivatedAt", currentProfile.activeSubscription.activatedAt);
+                            } else {
+                                await AsyncStorage.removeItem("planActivatedAt");
+                            }
                             
                             setLoading(false);
                             return;

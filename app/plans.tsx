@@ -83,12 +83,8 @@ export default function PlansScreen() {
             const userCategory = (profileData.user.businessCategory || "").toLowerCase().trim();
             if (userCategory === "shop") {
               router.replace("/Shop" as any);
-            } else if (userCategory === "supplier" || userCategory === "suppliers") {
-              router.replace("/supplier" as any);
             } else if (userCategory === "printing") {
               router.replace("/printing" as any);
-            } else if (userCategory === "builder") {
-              router.replace("/builder" as any);
             } else {
               router.replace("/home" as any);
             }
@@ -168,12 +164,8 @@ export default function PlansScreen() {
         
         if (userCategory === "shop") {
           router.replace("/Shop" as any);
-        } else if (userCategory === "supplier" || userCategory === "suppliers") {
-          router.replace("/supplier" as any);
         } else if (userCategory === "printing") {
           router.replace("/printing" as any);
-        } else if (userCategory === "builder") {
-          router.replace("/builder" as any);
         } else {
           router.replace("/home" as any);
         }
@@ -182,12 +174,8 @@ export default function PlansScreen() {
         const fallbackCat = category.toLowerCase();
         if (fallbackCat === "shop") {
           router.replace("/Shop" as any);
-        } else if (fallbackCat === "supplier" || fallbackCat === "suppliers") {
-          router.replace("/supplier" as any);
         } else if (fallbackCat === "printing") {
           router.replace("/printing" as any);
-        } else if (fallbackCat === "builder") {
-          router.replace("/builder" as any);
         } else {
           router.replace("/home" as any);
         }

@@ -69,7 +69,7 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.header}>
-            <Text style={styles.title}>Atithi</Text>
+            <Text style={styles.title}>Innix</Text>
             <Text style={styles.subtitle}>{"India's No. 1 Business App"}</Text>
           </View>
 

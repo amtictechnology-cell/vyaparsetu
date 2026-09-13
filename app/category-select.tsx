@@ -17,10 +17,7 @@ import {
 
 const CATEGORIES = [
   { name: "Hotel", icon: "hotel" },
-  { name: "Shop", icon: "shop" },
-  { name: "Supplier", icon: "truck" },
-  { name: "Printing", icon: "print" },
-  { name: "Builder", icon: "person-digging" }
+  { name: "Printing", icon: "print" }
 ];
 
 export default function CategorySelectScreen() {
@@ -57,12 +54,8 @@ export default function CategorySelectScreen() {
           if (isSubscribed === "true") {
             if (finalCategory === "shop") {
               router.replace("/Shop" as any);
-            } else if (finalCategory === "supplier" || finalCategory === "suppliers") {
-              router.replace("/supplier" as any);
             } else if (finalCategory === "printing") {
               router.replace("/printing" as any);
-            } else if (finalCategory === "builder") {
-              router.replace("/builder" as any);
             } else {
               router.replace("/home" as any);
             }
